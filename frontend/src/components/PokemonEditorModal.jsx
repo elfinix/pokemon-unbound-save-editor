@@ -412,16 +412,18 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
 
                 <div className="p-4 sm:p-6 bg-[#1e293b] flex justify-between items-center border-b border-white/5 gap-3">
                     <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                        <img
-                            src={client.getPokemonIconUrl(localPk.species_id)}
-                            className="w-12 h-12 pixelated"
-                            alt="icon"
-                            onError={(e) => {
-                                if (e.currentTarget.src !== POKEMON_ICON_FALLBACK_URL) {
-                                    e.currentTarget.src = POKEMON_ICON_FALLBACK_URL;
-                                }
-                            }}
-                        />
+                        <div className="w-12 h-12 bg-slate-900/80 rounded-xl flex items-center justify-center border border-white/10 overflow-hidden ring-1 ring-white/5 shrink-0">
+                            <img
+                                src={client.getPokemonIconUrl(localPk.species_id)}
+                                className="w-10 h-10 object-contain pixelated"
+                                alt="icon"
+                                onError={(e) => {
+                                    if (e.currentTarget.src !== POKEMON_ICON_FALLBACK_URL) {
+                                        e.currentTarget.src = POKEMON_ICON_FALLBACK_URL;
+                                    }
+                                }}
+                            />
+                        </div>
                         <div className="min-w-0">
                             <h2 className="text-lg sm:text-xl font-bold truncate">{localPk.nickname}</h2>
                             <p className="text-xs text-slate-500 uppercase font-black">Pokemon Editor</p>
@@ -864,16 +866,18 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
                                                 {currentSpeciesName}
                                             </span>
                                         </div>
-                                        <img
-                                            src={client.getPokemonIconUrl(localPk.species_id)}
-                                            alt={currentSpeciesName}
-                                            className="w-10 h-10 pixelated"
-                                            onError={(e) => {
-                                                if (e.currentTarget.src !== POKEMON_ICON_FALLBACK_URL) {
-                                                    e.currentTarget.src = POKEMON_ICON_FALLBACK_URL;
-                                                }
-                                            }}
-                                        />
+                                        <div className="w-10 h-10 bg-slate-800/80 rounded-lg flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
+                                            <img
+                                                src={client.getPokemonIconUrl(localPk.species_id)}
+                                                alt={currentSpeciesName}
+                                                className="w-8 h-8 object-contain pixelated"
+                                                onError={(e) => {
+                                                    if (e.currentTarget.src !== POKEMON_ICON_FALLBACK_URL) {
+                                                        e.currentTarget.src = POKEMON_ICON_FALLBACK_URL;
+                                                    }
+                                                }}
+                                            />
+                                        </div>
                                     </div>
                                 )}
 

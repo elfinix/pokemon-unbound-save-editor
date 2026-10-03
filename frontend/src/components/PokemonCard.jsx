@@ -30,12 +30,11 @@ const PokemonCard = ({ pokemon, onEdit, getPokemonIconUrl }) => {
                 <div className="relative">
                     <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full group-hover:bg-blue-500/40 transition-colors"></div>
                     <div
-                        className="relative w-20 h-20 bg-slate-800/80 rounded-3xl flex items-center justify-center border border-white/10 overflow-hidden ring-1 ring-white/5">
+                        className="relative w-20 h-20 bg-slate-800/80 rounded-2xl flex items-center justify-center border border-white/10 overflow-hidden ring-1 ring-white/5 shadow-inner">
                         <img
-                            // Interroga il backend passando solo l'ID numerico
                             src={getPokemonIconUrl(pokemon.species_id)}
                             alt={pokemon.species_name}
-                            className="w-16 h-16 object-contain pixelated"
+                            className="w-16 h-16 object-contain pixelated group-hover:scale-105 transition-transform duration-200"
                             onError={(e) => {
                                 if (e.currentTarget.src !== POKEMON_ICON_FALLBACK_URL) {
                                     e.currentTarget.src = POKEMON_ICON_FALLBACK_URL;
