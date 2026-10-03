@@ -74,11 +74,10 @@ switch-homebrew/build-lite/
 switch-homebrew/puse-switch-lite.nro
 switch-homebrew/puse-switch-lite.elf
 
-# Local planning/docs not needed for build
+# Local planning not needed for build
 AGENTS.md
 NEXT-RELEASE.md
 backend/SAVE_EDITING_GUIDE.md
-docs/
 
 # 3DS homebrew build outputs
 3ds-homebrew/build/
@@ -95,3 +94,6 @@ docs/
 3ds-homebrew/artifacts/
 3ds-homebrew/tools/tmp/
 3ds-homebrew/tools/imgui-backends/
+
+# Local specs
+spec/
