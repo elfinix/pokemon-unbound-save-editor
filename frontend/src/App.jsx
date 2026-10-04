@@ -16,6 +16,7 @@ import {
     CheckCircle2,
     ArrowRight,
     Shield,
+    Target,
     Cpu,
     Database,
     ListFilter,
@@ -31,6 +32,7 @@ const PCGrid = lazy(() => import('./components/PCGrid'));
 const AllPokemonTable = lazy(() => import('./components/AllPokemonTable.jsx'));
 const BagView = lazy(() => import('./components/BagView.jsx'));
 const LivingDexPanel = lazy(() => import('./components/LivingDexPanel.jsx'));
+const CoverageView = lazy(() => import('./components/CoverageView.jsx'));
 const PokemonEditorModal = lazy(() =>
     import('./components/PokemonEditorModal.jsx').then((mod) => ({ default: mod.PokemonEditorModal }))
 );
@@ -979,6 +981,12 @@ const App = () => {
                                     onEditPokemon={(pk) => setSelectedPokemon(pk)}
                                 />
                             )}
+                            {activeTab === 'coverage' && (
+                                <CoverageView
+                                    key={`coverage-${refreshKey}`}
+                                    client={client}
+                                />
+                            )}
                             {activeTab === 'pc' && <PCGrid
                                 key={`pc-${refreshKey}`}
                                 client={client}
@@ -1143,8 +1151,9 @@ const App = () => {
             )}
 
             {isLoaded && (
-                <nav aria-label="Editor sections" className="fixed bottom-6 w-[92%] max-w-xl bg-[#1e293b]/95 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-2 shadow-2xl flex justify-around z-50">
+                <nav aria-label="Editor sections" className="fixed bottom-6 w-[92%] max-w-2xl bg-[#1e293b]/95 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-2 shadow-2xl flex justify-around z-50">
                     <TabItem icon={<LayoutGrid size={20}/>} label="Party" active={activeTab === 'party'} onClick={() => handleTabChange('party')} />
+                    <TabItem icon={<Target size={20}/>} label="Coverage" active={activeTab === 'coverage'} onClick={() => handleTabChange('coverage')} />
                     <TabItem icon={<Users size={20}/>} label="PC Box" active={activeTab === 'pc'} onClick={() => handleTabChange('pc')} />
                     <TabItem icon={<ListFilter size={20}/>} label="All Pokémon" active={activeTab === 'all'} onClick={() => handleTabChange('all')} />
                     <TabItem icon={<Briefcase size={20}/>} label="Bag" active={activeTab === 'bag'} onClick={() => handleTabChange('bag')} />
