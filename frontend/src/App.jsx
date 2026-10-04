@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useMemo, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useMemo, useState, useEffect, useCallback } from 'react';
 import {
     Upload,
     LayoutGrid,
@@ -19,9 +19,12 @@ import {
     Cpu,
     Database,
     ListFilter,
+    HardDrive,
+    ChevronDown,
 } from 'lucide-react';
 import { createApiClient, getInitialRuntimeMode, persistRuntimeMode, RUNTIME_MODES } from './services/apiClient.js';
 import { getExpAtLevel, getSpeciesGrowthRate } from './core/growth.js';
+import ToastContainer from './components/ToastContainer.jsx';
 
 const PartyGrid = lazy(() => import('./components/PartyGrid'));
 const PCGrid = lazy(() => import('./components/PCGrid'));
@@ -34,6 +37,7 @@ const PokemonEditorModal = lazy(() =>
 const AddPcPokemonModal = lazy(() => import('./components/AddPcPokemonModal.jsx'));
 
 const LEGIT_MODE_STORAGE_KEY = 'puse_legit_mode';
+const HACKED_MODE_STORAGE_KEY = 'puse_hacked_mode';
 
 const getInitialLegitMode = () => {
     try {
@@ -43,9 +47,18 @@ const getInitialLegitMode = () => {
     }
 };
 
+const getInitialHackedMode = () => {
+    try {
+        return window.localStorage.getItem(HACKED_MODE_STORAGE_KEY) === '1';
+    } catch {
+        return false;
+    }
+};
+
 const App = () => {
     const [runtimeMode, setRuntimeMode] = useState(getInitialRuntimeMode);
     const [legitMode, setLegitMode] = useState(getInitialLegitMode);
+    const [hackedMode, setHackedMode] = useState(getInitialHackedMode);
     const [activeTab, setActiveTab] = useState('party');
     const [isLoaded, setIsLoaded] = useState(false);
     const [saveExt, setSaveExt] = useState('.sav');
@@ -58,7 +71,22 @@ const App = () => {
     const [showSaveReport, setShowSaveReport] = useState(false);
     const [moneyInput, setMoneyInput] = useState('0');
     const [bpInput, setBpInput] = useState('0');
+    const [toasts, setToasts] = useState([]);
     const client = useMemo(() => createApiClient(runtimeMode), [runtimeMode]);
+
+    const showToast = useCallback((message, type = 'success', duration = 3500) => {
+        const id = `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        setToasts((prev) => [...prev, { id, message, type }]);
+        if (duration > 0) {
+            setTimeout(() => {
+                setToasts((prev) => prev.filter((t) => t.id !== id));
+            }, duration);
+        }
+    }, []);
+
+    const dismissToast = useCallback((id) => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, []);
 
     useEffect(() => {
         persistRuntimeMode(runtimeMode);
@@ -72,6 +100,16 @@ const App = () => {
         }
     }, [legitMode]);
 
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(HACKED_MODE_STORAGE_KEY, hackedMode ? '1' : '0');
+        } catch {
+            // ignore storage failures
+        }
+    }, [hackedMode]);
+
+    const [loadingDefault, setLoadingDefault] = useState(false);
+
     const uploadSaveFile = async (file) => {
         if (!file) return;
 
@@ -84,8 +122,28 @@ const App = () => {
             setBpInput(String(bpData.bp ?? 0));
             setSaveExt(file.name.toLowerCase().endsWith('.srm') ? '.srm' : '.sav');
             setIsLoaded(true);
+            showToast(`Save file '${file.name}' loaded successfully!`, 'success');
         } catch {
-            alert("Upload failed for current runtime mode.");
+            showToast('Upload failed for current runtime mode.', 'error');
+        }
+    };
+
+    const handleLoadDefaultSave = async () => {
+        try {
+            setLoadingDefault(true);
+            await client.loadDefaultSave();
+            const [mData, bpData] = await Promise.all([client.getMoney(), client.getBp()]);
+            setMoney(Number(mData.money ?? 0));
+            setBp(Number(bpData.bp ?? 0));
+            setMoneyInput(String(mData.money ?? 0));
+            setBpInput(String(bpData.bp ?? 0));
+            setSaveExt('.sav');
+            setIsLoaded(true);
+            showToast("Default save 'Pokemon Unbound.sav' loaded successfully!", 'success');
+        } catch (err) {
+            showToast(err?.message || 'Failed to load default save file.', 'error');
+        } finally {
+            setLoadingDefault(false);
         }
     };
 
@@ -284,9 +342,9 @@ const App = () => {
 
             setSelectedPokemon(null);
             setRefreshKey(prev => prev + 1);
-            alert("Pokemon updated and saved successfully!");
+            showToast("Pokemon updated and saved successfully!", "success");
         } catch {
-            alert("Failed to save all changes.");
+            showToast("Failed to save all changes.", "error");
         }
     };
 
@@ -376,9 +434,9 @@ const App = () => {
             await client.saveAll();
             setSelectedPokemon(null);
             setRefreshKey(prev => prev + 1);
-            alert("PC Box updated successfully!");
+            showToast("PC Box updated successfully!", "success");
         } catch {
-            alert("Failed to save PC Box.");
+            showToast("Failed to save PC Box.", "error");
         }
     };
 
@@ -388,9 +446,9 @@ const App = () => {
             await client.saveAll();
             setPcInsertTarget(null);
             setRefreshKey(prev => prev + 1);
-            alert('Pokemon inserted successfully!');
+            showToast('Pokemon inserted successfully!', 'success');
         } catch {
-            alert('Failed to add Pokemon to PC box.');
+            showToast('Failed to add Pokemon to PC box.', 'error');
         }
     };
 
@@ -403,9 +461,9 @@ const App = () => {
             await client.releasePc({ box, slot });
             await client.saveAll();
             setRefreshKey(prev => prev + 1);
-            alert('Pokemon released successfully.');
+            showToast('Pokemon released successfully.', 'success');
         } catch {
-            alert('Failed to release Pokemon.');
+            showToast('Failed to release Pokemon.', 'error');
         }
     };
 
@@ -424,10 +482,10 @@ const App = () => {
             setMoney(Number(mData.money ?? amount));
             setBp(Number(bpData.bp ?? bpAmount));
             setShowResourcesModal(false);
-            alert('Resources updated successfully!');
+            showToast('Resources updated successfully!', 'success');
         } catch (err) {
             console.error(err);
-            alert('Failed to update resources.');
+            showToast('Failed to update resources.', 'error');
         }
     };
 
@@ -486,28 +544,43 @@ const App = () => {
             <header className="w-full bg-[#1e293b]/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-50">
                 <div className="max-w-6xl mx-auto p-4 flex justify-between items-center gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                        <h1 className="text-xl font-black text-blue-400 tracking-tighter uppercase">
-                            <span className="md:hidden">PUSE</span>
-                            <span className="hidden md:inline">PUSE - Pokemon Unbound Save Editor</span>
+                        <h1 className="text-xl font-black text-blue-400 tracking-tighter uppercase whitespace-nowrap shrink-0">
+                            <span className="md:hidden">Save Editor</span>
+                            <span className="hidden md:inline">Pokemon Unbound Save Editor</span>
                         </h1>
-                        <select
-                            value={runtimeMode}
-                            onChange={(e) => setRuntimeMode(e.target.value)}
-                            className="bg-slate-900 border border-white/10 rounded-xl px-2 py-1 text-[10px] uppercase tracking-widest text-slate-300 min-w-[116px]"
-                        >
-                            <option value={RUNTIME_MODES.backend}>Backend mode</option>
-                            <option value={RUNTIME_MODES.local}>Local mode</option>
-                        </select>
+                        <div className="relative shrink-0">
+                            <select
+                                value={runtimeMode}
+                                onChange={(e) => setRuntimeMode(e.target.value)}
+                                className="appearance-none bg-slate-900 border border-white/10 rounded-xl pl-3 pr-7 py-1.5 text-[10px] uppercase tracking-widest text-slate-300 min-w-[124px] whitespace-nowrap cursor-pointer outline-none focus:border-blue-500/50"
+                            >
+                                <option value={RUNTIME_MODES.backend}>Backend mode</option>
+                                <option value={RUNTIME_MODES.local}>Local mode</option>
+                            </select>
+                            <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        </div>
                         <button
                             type="button"
                             onClick={() => setLegitMode((prev) => !prev)}
-                            className={`px-3 py-1 rounded-xl text-[10px] uppercase tracking-widest font-bold border transition-colors ${
+                            className={`px-3 py-1.5 rounded-xl text-[10px] uppercase tracking-wider font-bold border whitespace-nowrap shrink-0 transition-colors ${
                                 legitMode
                                     ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
                                     : 'bg-slate-900 border-white/10 text-slate-300 hover:bg-slate-800'
                             }`}
                         >
                             Legit: {legitMode ? 'ON' : 'OFF'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setHackedMode((prev) => !prev)}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] uppercase tracking-wider font-bold border whitespace-nowrap shrink-0 transition-colors ${
+                                hackedMode
+                                    ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.2)]'
+                                    : 'bg-slate-900 border-white/10 text-slate-300 hover:bg-slate-800'
+                            }`}
+                            title="Hacked Mode disables EV 510 total cap"
+                        >
+                            Hacked: {hackedMode ? 'ON' : 'OFF'}
                         </button>
                         <button
                             type="button"
@@ -523,22 +596,22 @@ const App = () => {
                         <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-end">
                             <button
                                 onClick={openResourcesModal}
-                                className="px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold transition-colors"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-colors shadow-sm"
                                 aria-label="Edit resources"
                             >
-                                <span className="inline-flex items-center gap-2"><Edit3 size={14} /> RESOURCES</span>
+                                <Edit3 size={14} /> Resources
                             </button>
                             <button
                                 onClick={handleRestartApp}
-                                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all"
+                                className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm"
                             >
-                                <RotateCcw size={14} /> RESTART / LOAD NEW FILE
+                                <RotateCcw size={14} /> Restart
                             </button>
                             <button
                                 onClick={handleDownload}
-                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all"
+                                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-md shadow-blue-500/20"
                             >
-                                <Save size={14} /> REVIEW / DOWNLOAD {saveExt.toUpperCase()}
+                                <Save size={14} /> Save
                             </button>
                         </div>
                     )}
@@ -546,7 +619,7 @@ const App = () => {
                 {showLegitHelp && (
                     <div className="max-w-6xl mx-auto px-4 pb-3">
                         <p className="text-[11px] text-slate-300 bg-slate-900/70 border border-white/10 rounded-xl px-3 py-2">
-                            Legit Mode enforces 510 total EV cap and keeps level edits explicit in the 1-100 range.
+                            <strong>Legit Mode:</strong> Restricts level editing (1-100) and verifies valid abilities/items. <strong>Hacked Mode:</strong> OFF = 510 total EV cap enforced, ON = uncapped EVs (all stats up to 252).
                         </p>
                     </div>
                 )}
@@ -554,15 +627,14 @@ const App = () => {
 
             <main className="w-full max-w-6xl px-4 pt-4 pb-48 md:px-8 md:pt-8 md:pb-48">
                 {!isLoaded ? (
-                    <div className="space-y-10 md:space-y-14 pb-8">
+                    <div className="space-y-6 md:space-y-8 pb-8">
+                        {/* Box 1: Main Card */}
                         <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-[#1e293b]/95 via-[#16243c]/95 to-[#0f172a] p-5 md:p-8">
                             <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-blue-500/15 blur-3xl" />
                             <div className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" />
-                            <div className="relative grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6 md:gap-8 items-start">
+                            <div className="relative grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6 md:gap-8 items-center">
+                                {/* Left Side */}
                                 <div className="space-y-5 md:space-y-6">
-                                    <p className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-[10px] md:text-xs font-black uppercase tracking-[0.16em] text-blue-300">
-                                        <Sparkles size={12} /> Save editor for Pokemon Unbound
-                                    </p>
                                     <h2 className="text-3xl md:text-5xl font-black leading-tight tracking-tight text-white">
                                         Edit your team, PC, bag, and money in a clean web workflow.
                                     </h2>
@@ -585,7 +657,14 @@ const App = () => {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 md:space-y-5">
+                                {/* Right Side */}
+                                <div className="space-y-3 md:space-y-4">
+                                    <div>
+                                        <p className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-[10px] md:text-xs font-black uppercase tracking-[0.16em] text-blue-300">
+                                            <Sparkles size={12} /> Save editor for Pokemon Unbound
+                                        </p>
+                                    </div>
+
                                     <div
                                         className="rounded-[1.75rem] border border-blue-500/30 bg-slate-950/50 p-5 md:p-6"
                                         onDrop={handleDropUpload}
@@ -604,180 +683,197 @@ const App = () => {
                                         <div className="mt-4 rounded-2xl border border-dashed border-blue-400/40 bg-slate-900/60 px-4 py-6 text-center">
                                             <p className="text-xs text-slate-300">Drag and drop your file here</p>
                                             <p className="mt-1 text-[11px] text-slate-500">Accepted: <span className="font-mono">.sav</span> and <span className="font-mono">.srm</span></p>
-                                            <label className="mt-4 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-xl cursor-pointer font-bold transition-all shadow-lg active:scale-95 text-xs md:text-sm">
-                                                SELECT SAVE FILE <ArrowRight size={14} />
-                                                <input type="file" className="hidden" onChange={handleUpload} accept=".sav,.srm" />
-                                            </label>
+                                            <div className="mt-6 flex flex-col items-center gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleLoadDefaultSave}
+                                                    disabled={loadingDefault}
+                                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-xl cursor-pointer font-bold transition-all shadow-lg active:scale-95 text-xs md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <HardDrive size={15} />
+                                                    {loadingDefault ? "LOADING..." : "LOAD DEFAULT SAVE"}
+                                                </button>
+                                                <label className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-transparent hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60 hover:border-slate-500 px-5 py-2 rounded-xl cursor-pointer font-semibold transition-all text-xs active:scale-95">
+                                                    <Upload size={13} />
+                                                    SELECT SAVE FILE
+                                                    <input type="file" className="hidden" onChange={handleUpload} accept=".sav,.srm" />
+                                                </label>
+                                            </div>
                                         </div>
 
                                         <p className="mt-4 text-[11px] text-slate-400 leading-relaxed">
                                             Tip: Local mode runs entirely in your browser. Backend mode uses FastAPI endpoints.
                                         </p>
                                     </div>
+                                </div>
+                            </div>
+                        </section>
 
-                                    <details className="group rounded-[1.75rem] border border-amber-500/30 bg-amber-500/5 p-5 md:p-6">
-                                        <summary className="list-none cursor-pointer flex items-start justify-between gap-3">
-                                            <div>
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-amber-300">Recovery tools</p>
-                                                <h3 className="mt-1 text-lg font-bold text-slate-100">RTC Metadata Recovery</h3>
-                                                <p className="mt-1 text-xs text-slate-300">Prefer Unbound's own Time Fixer; use pair repair as an advanced fallback.</p>
-                                            </div>
-                                            <div className="text-[10px] text-amber-200 uppercase tracking-widest group-open:hidden">Open</div>
-                                            <div className="text-[10px] text-amber-200 uppercase tracking-widest hidden group-open:block">Close</div>
-                                        </summary>
+                        {/* Box 2: Recovery Tools & Utility */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                            <details className="group rounded-[2rem] border border-amber-500/30 bg-gradient-to-br from-amber-500/5 via-slate-900/60 to-slate-950 p-5 md:p-6 transition-all">
+                                <summary className="list-none cursor-pointer flex items-start justify-between gap-3">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-300">Recovery tools</p>
+                                        <h3 className="mt-1 text-lg font-bold text-slate-100">RTC Metadata Recovery</h3>
+                                        <p className="mt-1 text-xs text-slate-300">Prefer Unbound's own Time Fixer; use pair repair as an advanced fallback.</p>
+                                    </div>
+                                    <div className="text-[10px] text-amber-200 uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 font-bold group-open:hidden">Open</div>
+                                    <div className="text-[10px] text-amber-200 uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 font-bold hidden group-open:block">Close</div>
+                                </summary>
 
-                                        <div className="mt-5 border-t border-amber-500/20 pt-5">
-                                            <div className="inline-flex rounded-xl border border-white/10 bg-slate-900/60 p-1 text-[10px] uppercase tracking-widest font-bold">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setRtcTab('pair')}
-                                                    className={`px-3 py-1 rounded-lg transition-colors ${
-                                                        rtcTab === 'pair' ? 'bg-amber-600 text-white' : 'text-slate-300 hover:bg-white/5'
-                                                    }`}
-                                                >
-                                                    Pair Repair (Advanced)
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setRtcTab('quick')}
-                                                    className={`px-3 py-1 rounded-lg transition-colors ${
-                                                        rtcTab === 'quick' ? 'bg-amber-600 text-white' : 'text-slate-300 hover:bg-white/5'
-                                                    }`}
-                                                >
-                                                    Re-enable Time Fixer
-                                                </button>
-                                            </div>
+                                <div className="mt-5 border-t border-amber-500/20 pt-5">
+                                    <div className="inline-flex rounded-xl border border-white/10 bg-slate-900/60 p-1 text-[10px] uppercase tracking-widest font-bold">
+                                        <button
+                                            type="button"
+                                            onClick={() => setRtcTab('pair')}
+                                            className={`px-3 py-1 rounded-lg transition-colors ${
+                                                rtcTab === 'pair' ? 'bg-amber-600 text-white' : 'text-slate-300 hover:bg-white/5'
+                                            }`}
+                                        >
+                                            Pair Repair (Advanced)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setRtcTab('quick')}
+                                            className={`px-3 py-1 rounded-lg transition-colors ${
+                                                rtcTab === 'quick' ? 'bg-amber-600 text-white' : 'text-slate-300 hover:bg-white/5'
+                                            }`}
+                                        >
+                                            Re-enable Time Fixer
+                                        </button>
+                                    </div>
 
-                                            {rtcTab === 'pair' ? (
-                                                <>
-                                                    <p className="mt-3 text-sm text-slate-200">
-                                                        Build a repair pack using a tampered save and one NPC-fixed save.
-                                                    </p>
-                                                    <div className="mt-4 grid grid-cols-1 gap-3 text-xs text-slate-300">
-                                                        <label className="block">
-                                                            <span className="block mb-1 text-slate-400">Tampered save (.sav)</span>
-                                                            <input
-                                                                type="file"
-                                                                accept=".sav"
-                                                                onChange={(e) => setRtcBrokenFile(e.target.files?.[0] || null)}
-                                                                className="w-full text-xs"
-                                                            />
-                                                        </label>
-                                                        <label className="block">
-                                                            <span className="block mb-1 text-slate-400">NPC-fixed save (.sav)</span>
-                                                            <input
-                                                                type="file"
-                                                                accept=".sav"
-                                                                onChange={(e) => setRtcFixedFile(e.target.files?.[0] || null)}
-                                                                className="w-full text-xs"
-                                                            />
-                                                        </label>
-                                                    </div>
-                                                    <button
-                                                        onClick={handleRtcFixPack}
-                                                        disabled={rtcBusy}
-                                                        className="mt-4 inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 disabled:bg-amber-900/60 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
-                                                    >
-                                                        <ShieldAlert size={14} /> {rtcBusy ? 'GENERATING...' : 'GENERATE PAIR REPAIR PACK'}
-                                                    </button>
-                                                    <p className="mt-2 text-[11px] text-slate-400">
-                                                        Downloads manifest and fallback candidates in recommended order.
-                                                    </p>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <p className="mt-3 text-sm text-slate-200">
-                                                        Safely re-enable the one-use Frozen Heights Time Fixer by clearing only its used flag.
-                                                    </p>
-                                                    <p className="mt-2 text-[11px] text-amber-300">
-                                                        First correct the emulator or device RTC. This download does not repair RTC metadata by itself.
-                                                    </p>
-                                                    <div className="mt-3 text-xs text-slate-300">
-                                                        <label className="block">
-                                                            <span className="block mb-1 text-slate-400">Pokemon Unbound save (.sav or .srm)</span>
-                                                            <input
-                                                                type="file"
-                                                                accept=".sav,.srm"
-                                                                onChange={(e) => setRtcTimeFixerFile(e.target.files?.[0] || null)}
-                                                                className="w-full text-xs"
-                                                            />
-                                                        </label>
-                                                    </div>
-                                                    <button
-                                                        onClick={handleRtcTimeFixerReset}
-                                                        disabled={rtcBusy}
-                                                        className="mt-4 inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 disabled:bg-amber-900/60 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
-                                                    >
-                                                        <ShieldAlert size={14} /> {rtcBusy ? 'VALIDATING...' : 'RE-ENABLE TIME FIXER'}
-                                                    </button>
-                                                    <p className="mt-2 text-[11px] text-slate-400">
-                                                        Validates the save, changes exactly one byte in the active generation, and preserves the older fallback copy and RTC trailer.
-                                                    </p>
-                                                </>
-                                            )}
-                                        </div>
-                                    </details>
-
-                                    <details className="group rounded-[1.75rem] border border-cyan-500/30 bg-cyan-500/5 p-5 md:p-6">
-                                        <summary className="list-none cursor-pointer flex items-start justify-between gap-3">
-                                            <div>
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-cyan-300">Utility</p>
-                                                <h3 className="mt-1 text-lg font-bold text-slate-100">SRM / SAV Converter</h3>
-                                                <p className="mt-1 text-xs text-slate-300">Convert emulator save container format without opening the main editor.</p>
-                                            </div>
-                                            <div className="text-[10px] text-cyan-200 uppercase tracking-widest group-open:hidden">Open</div>
-                                            <div className="text-[10px] text-cyan-200 uppercase tracking-widest hidden group-open:block">Close</div>
-                                        </summary>
-
-                                        <div className="mt-5 border-t border-cyan-500/20 pt-5">
-                                            <div className="text-xs text-slate-300">
+                                    {rtcTab === 'pair' ? (
+                                        <>
+                                            <p className="mt-3 text-sm text-slate-200">
+                                                Build a repair pack using a tampered save and one NPC-fixed save.
+                                            </p>
+                                            <div className="mt-4 grid grid-cols-1 gap-3 text-xs text-slate-300">
                                                 <label className="block">
-                                                    <span className="block mb-1 text-slate-400">Input file (.sav or .srm)</span>
+                                                    <span className="block mb-1 text-slate-400">Tampered save (.sav)</span>
                                                     <input
                                                         type="file"
-                                                        accept=".sav,.srm"
-                                                        onChange={(e) => setConvertFile(e.target.files?.[0] || null)}
+                                                        accept=".sav"
+                                                        onChange={(e) => setRtcBrokenFile(e.target.files?.[0] || null)}
+                                                        className="w-full text-xs"
+                                                    />
+                                                </label>
+                                                <label className="block">
+                                                    <span className="block mb-1 text-slate-400">NPC-fixed save (.sav)</span>
+                                                    <input
+                                                        type="file"
+                                                        accept=".sav"
+                                                        onChange={(e) => setRtcFixedFile(e.target.files?.[0] || null)}
                                                         className="w-full text-xs"
                                                     />
                                                 </label>
                                             </div>
-
-                                            <div className="mt-4 inline-flex rounded-xl border border-white/10 bg-slate-900/60 p-1 text-[10px] uppercase tracking-widest font-bold">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setConvertTarget('.sav')}
-                                                    className={`px-3 py-1 rounded-lg transition-colors ${
-                                                        convertTarget === '.sav' ? 'bg-cyan-600 text-white' : 'text-slate-300 hover:bg-white/5'
-                                                    }`}
-                                                >
-                                                    To .sav
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setConvertTarget('.srm')}
-                                                    className={`px-3 py-1 rounded-lg transition-colors ${
-                                                        convertTarget === '.srm' ? 'bg-cyan-600 text-white' : 'text-slate-300 hover:bg-white/5'
-                                                    }`}
-                                                >
-                                                    To .srm
-                                                </button>
-                                            </div>
-
                                             <button
-                                                onClick={handleSaveConvert}
-                                                disabled={convertBusy}
-                                                className="mt-4 inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-900/60 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                                                onClick={handleRtcFixPack}
+                                                disabled={rtcBusy}
+                                                className="mt-4 inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 disabled:bg-amber-900/60 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
                                             >
-                                                <Save size={14} /> {convertBusy ? 'CONVERTING...' : `CONVERT TO ${convertTarget.toUpperCase()}`}
+                                                <ShieldAlert size={14} /> {rtcBusy ? 'GENERATING...' : 'GENERATE PAIR REPAIR PACK'}
                                             </button>
                                             <p className="mt-2 text-[11px] text-slate-400">
-                                                Supports 128 KiB and 128 KiB + 16 byte layouts. The original file is never modified.
+                                                Downloads manifest and fallback candidates in recommended order.
                                             </p>
-                                        </div>
-                                    </details>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="mt-3 text-sm text-slate-200">
+                                                Safely re-enable the one-use Frozen Heights Time Fixer by clearing only its used flag.
+                                            </p>
+                                            <p className="mt-2 text-[11px] text-amber-300">
+                                                First correct the emulator or device RTC. This download does not repair RTC metadata by itself.
+                                            </p>
+                                            <div className="mt-3 text-xs text-slate-300">
+                                                <label className="block">
+                                                    <span className="block mb-1 text-slate-400">Pokemon Unbound save (.sav or .srm)</span>
+                                                    <input
+                                                        type="file"
+                                                        accept=".sav,.srm"
+                                                        onChange={(e) => setRtcTimeFixerFile(e.target.files?.[0] || null)}
+                                                        className="w-full text-xs"
+                                                    />
+                                                </label>
+                                            </div>
+                                            <button
+                                                onClick={handleRtcTimeFixerReset}
+                                                disabled={rtcBusy}
+                                                className="mt-4 inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-500 disabled:bg-amber-900/60 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                            >
+                                                <ShieldAlert size={14} /> {rtcBusy ? 'VALIDATING...' : 'RE-ENABLE TIME FIXER'}
+                                            </button>
+                                            <p className="mt-2 text-[11px] text-slate-400">
+                                                Validates the save, changes exactly one byte in the active generation, and preserves the older fallback copy and RTC trailer.
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
-                            </div>
-                        </section>
+                            </details>
+
+                            <details className="group rounded-[2rem] border border-cyan-500/30 bg-gradient-to-br from-cyan-500/5 via-slate-900/60 to-slate-950 p-5 md:p-6 transition-all">
+                                <summary className="list-none cursor-pointer flex items-start justify-between gap-3">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-cyan-300">Utility</p>
+                                        <h3 className="mt-1 text-lg font-bold text-slate-100">SRM / SAV Converter</h3>
+                                        <p className="mt-1 text-xs text-slate-300">Convert emulator save container format without opening the main editor.</p>
+                                    </div>
+                                    <div className="text-[10px] text-cyan-200 uppercase tracking-widest px-2.5 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 font-bold group-open:hidden">Open</div>
+                                    <div className="text-[10px] text-cyan-200 uppercase tracking-widest px-2.5 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 font-bold hidden group-open:block">Close</div>
+                                </summary>
+
+                                <div className="mt-5 border-t border-cyan-500/20 pt-5">
+                                    <div className="text-xs text-slate-300">
+                                        <label className="block">
+                                            <span className="block mb-1 text-slate-400">Input file (.sav or .srm)</span>
+                                            <input
+                                                type="file"
+                                                accept=".sav,.srm"
+                                                onChange={(e) => setConvertFile(e.target.files?.[0] || null)}
+                                                className="w-full text-xs"
+                                            />
+                                        </label>
+                                    </div>
+
+                                    <div className="mt-4 inline-flex rounded-xl border border-white/10 bg-slate-900/60 p-1 text-[10px] uppercase tracking-widest font-bold">
+                                        <button
+                                            type="button"
+                                            onClick={() => setConvertTarget('.sav')}
+                                            className={`px-3 py-1 rounded-lg transition-colors ${
+                                                convertTarget === '.sav' ? 'bg-cyan-600 text-white' : 'text-slate-300 hover:bg-white/5'
+                                            }`}
+                                        >
+                                            To .sav
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setConvertTarget('.srm')}
+                                            className={`px-3 py-1 rounded-lg transition-colors ${
+                                                convertTarget === '.srm' ? 'bg-cyan-600 text-white' : 'text-slate-300 hover:bg-white/5'
+                                            }`}
+                                        >
+                                            To .srm
+                                        </button>
+                                    </div>
+
+                                    <div>
+                                        <button
+                                            onClick={handleSaveConvert}
+                                            disabled={convertBusy}
+                                            className="mt-4 inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-900/60 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                        >
+                                            <Save size={14} /> {convertBusy ? 'CONVERTING...' : `CONVERT TO ${convertTarget.toUpperCase()}`}
+                                        </button>
+                                    </div>
+                                    <p className="mt-2 text-[11px] text-slate-400">
+                                        Supports 128 KiB and 128 KiB + 16 byte layouts. The original file is never modified.
+                                    </p>
+                                </div>
+                            </details>
+                        </div>
 
                         <section className="space-y-4">
                             <div className="flex items-center gap-2 text-slate-300">
@@ -848,7 +944,7 @@ const App = () => {
 
                         <footer className="rounded-[2rem] border border-white/10 bg-[#1e293b]/40 px-5 py-5 md:px-6 md:py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div>
-                                <p className="text-sm font-bold text-slate-100">PUSE - Pokemon Unbound Save Editor</p>
+                                <p className="text-sm font-bold text-slate-100">Pokemon Unbound Save Editor</p>
                                 <p className="text-[11px] text-slate-400 mt-1">
                                     Unofficial fan utility. Always edit copies of your save files.
                                 </p>
@@ -1026,6 +1122,7 @@ const App = () => {
                         client={client}
                         pokemon={selectedPokemon}
                         legitMode={legitMode}
+                        hackedMode={hackedMode}
                         onClose={() => setSelectedPokemon(null)}
                         onSave={selectedPokemon?.isPC ? handleSavePC : handleSavePokemon}
                     />
@@ -1038,6 +1135,7 @@ const App = () => {
                         client={client}
                         target={pcInsertTarget}
                         legitMode={legitMode}
+                        hackedMode={hackedMode}
                         onClose={() => setPcInsertTarget(null)}
                         onConfirm={handleInsertPcPokemon}
                     />
@@ -1054,6 +1152,7 @@ const App = () => {
                 </nav>
             )}
 
+            <ToastContainer toasts={toasts} onDismiss={dismissToast} />
         </div>
     );
 };

@@ -1,10 +1,54 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, Zap, Save, Search, Download, CircleHelp } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { X, Zap, Save, Search, Download, CircleHelp, ChevronDown } from 'lucide-react';
 import { calcCurrentLevel, GROWTH_OPTIONS } from '../core/growth.js';
 import { ITEM_ICON_FALLBACK_URL, POKEMON_ICON_FALLBACK_URL } from '../core/iconResolver.js';
-import { NATURES, normalizeName, parseShowdownSet, resolveShowdownSet } from '../core/showdownImport.js';
+import { NATURES, NATURE_GROUPS, normalizeName, parseShowdownSet, resolveShowdownSet } from '../core/showdownImport.js';
 import PokedexFlagsControls from './PokedexFlagsControls.jsx';
 import { calculateBattleStats, calculateHiddenPowerType } from '../core/battlePreview.js';
+import speciesBaseStats from '../core/speciesBaseStats.json' with { type: 'json' };
+import movesMeta from '../core/movesMeta.json' with { type: 'json' };
+
+const TYPE_STYLES = {
+    Normal: { bg: 'bg-stone-500/20', text: 'text-stone-300', border: 'border-stone-500/30' },
+    Fire: { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30' },
+    Water: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' },
+    Grass: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+    Electric: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30' },
+    Ice: { bg: 'bg-cyan-400/20', text: 'text-cyan-300', border: 'border-cyan-400/30' },
+    Fighting: { bg: 'bg-red-700/20', text: 'text-red-400', border: 'border-red-700/30' },
+    Poison: { bg: 'bg-purple-500/20', text: 'text-purple-300', border: 'border-purple-500/30' },
+    Ground: { bg: 'bg-amber-600/20', text: 'text-amber-300', border: 'border-amber-600/30' },
+    Flying: { bg: 'bg-indigo-400/20', text: 'text-indigo-300', border: 'border-indigo-400/30' },
+    Psychic: { bg: 'bg-pink-500/20', text: 'text-pink-400', border: 'border-pink-500/30' },
+    Bug: { bg: 'bg-lime-500/20', text: 'text-lime-400', border: 'border-lime-500/30' },
+    Rock: { bg: 'bg-yellow-700/20', text: 'text-yellow-300', border: 'border-yellow-700/30' },
+    Ghost: { bg: 'bg-violet-700/20', text: 'text-violet-300', border: 'border-violet-700/30' },
+    Dragon: { bg: 'bg-indigo-600/20', text: 'text-indigo-400', border: 'border-indigo-600/30' },
+    Steel: { bg: 'bg-slate-400/20', text: 'text-slate-300', border: 'border-slate-400/30' },
+    Dark: { bg: 'bg-zinc-800/80', text: 'text-zinc-300', border: 'border-zinc-600/40' },
+    Fairy: { bg: 'bg-rose-400/20', text: 'text-rose-300', border: 'border-rose-400/30' },
+};
+
+const TYPE_ABBR = {
+    Normal: 'NOR',
+    Fire: 'FIR',
+    Water: 'WAT',
+    Grass: 'GRA',
+    Electric: 'ELE',
+    Ice: 'ICE',
+    Fighting: 'FIG',
+    Poison: 'POI',
+    Ground: 'GRO',
+    Flying: 'FLY',
+    Psychic: 'PSY',
+    Bug: 'BUG',
+    Rock: 'ROC',
+    Ghost: 'GHO',
+    Dragon: 'DRA',
+    Steel: 'STE',
+    Dark: 'DAR',
+    Fairy: 'FAI',
+};
 
 const EV_STAT_MAX = 252;
 const EV_TOTAL_MAX = 510;
@@ -27,7 +71,7 @@ const getTotalEvs = (evs = {}) =>
     Number(evs.SpD ?? 0) +
     getSpeedStatValue(evs);
 
-export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose, onSave }) => {
+export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedMode = false, onClose, onSave }) => {
     const isPcMon = Boolean(pokemon?.isPC);
     const SAFE_IMPORT_NOTE = 'Existing Pokemon import applies item, moves, IVs, EVs, nature, and ability (if valid). Species, level, and identity metadata are preserved.';
     const initialGrowthMode = 'auto';
@@ -74,7 +118,7 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
     };
 
     const currentItem = allItems.find(i => i.id === localPk.item_id);
-    const currentItemName = currentItem?.name || `ID ${localPk.item_id}`;
+    const currentItemName = localPk.item_id === 0 ? 'None' : (currentItem?.name || `ID ${localPk.item_id}`);
     const currentBall = allBalls.find((b) => Number(b.ball_id) === Number(localPk.ball_id));
     const currentBallName = currentBall?.name || localPk.ball_name || `Unknown Ball #${localPk.ball_id}`;
     const currentBallItemId = currentBall?.item_id || localPk.ball_item_id || null;
@@ -103,7 +147,7 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
                 nextGroup[stat] = clampNumber(val, 0, 31);
             } else if (type === 'evs') {
                 let nextEv = clampNumber(val, 0, EV_STAT_MAX);
-                if (legitMode) {
+                if (!hackedMode) {
                     const currentTotal = getTotalEvs(prev.evs || {});
                     const currentStat = Number((prev.evs || {})[stat] ?? 0);
                     const totalWithoutCurrent = currentTotal - currentStat;
@@ -122,6 +166,41 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
         });
     };
 
+    const setAllIvs = (val) => {
+        const clamped = clampNumber(val, 0, 31);
+        setLocalPk((prev) => {
+            const nextIvs = { ...(prev.ivs || {}) };
+            ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe', 'Spd'].forEach((k) => {
+                if (k in nextIvs || ['HP', 'Atk', 'Def', 'SpA', 'SpD'].includes(k)) {
+                    nextIvs[k] = clamped;
+                }
+            });
+            return { ...prev, ivs: nextIvs };
+        });
+    };
+
+    const clearAllEvs = () => {
+        setLocalPk((prev) => {
+            const nextEvs = { ...(prev.evs || {}) };
+            Object.keys(nextEvs).forEach((k) => {
+                nextEvs[k] = 0;
+            });
+            return { ...prev, evs: nextEvs };
+        });
+    };
+
+    const setMaxAllPp = () => {
+        const nextUps = [3, 3, 3, 3];
+        const nextPp = (localPk.moves || [0, 0, 0, 0]).map((moveId) => {
+            const id = Number(moveId || 0);
+            if (id <= 0) return 0;
+            const moveEntry = allMoves.find((m) => Number(m.id) === id) || movesMeta[String(id)];
+            const basePp = Number(moveEntry?.base_pp || 0);
+            return basePp > 0 ? basePp + Math.floor((basePp * 3) / 5) : 0;
+        });
+        setLocalPk({ ...localPk, move_pp_ups: nextUps, move_pp: nextPp });
+    };
+
     const updateMove = (slotIndex, moveId) => {
         const nextMoveId = Number.parseInt(moveId, 10) || 0;
         const newMoves = [...(localPk.moves || [0, 0, 0, 0])];
@@ -133,7 +212,7 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
             newMovePpUps[slotIndex] = 0;
             newMovePp[slotIndex] = 0;
         } else {
-            const moveEntry = allMoves.find((m) => Number(m.id) === nextMoveId);
+            const moveEntry = allMoves.find((m) => Number(m.id) === nextMoveId) || movesMeta[String(nextMoveId)];
             const basePp = Number(moveEntry?.base_pp || 0);
             const ppUp = Math.max(0, Math.min(3, Number(newMovePpUps[slotIndex] || 0)));
             const maxPp = basePp > 0 ? basePp + Math.floor((basePp * ppUp) / 5) : 0;
@@ -150,7 +229,7 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
     const getSlotMaxPp = (slotIndex) => {
         const moveId = Number(localPk.moves?.[slotIndex] || 0);
         if (moveId <= 0) return 0;
-        const moveEntry = allMoves.find((m) => Number(m.id) === moveId);
+        const moveEntry = allMoves.find((m) => Number(m.id) === moveId) || movesMeta[String(moveId)];
         const basePp = Number(moveEntry?.base_pp || 0);
         const ppUp = Math.max(0, Math.min(3, Number(localPk.move_pp_ups?.[slotIndex] || 0)));
         if (!Number.isFinite(basePp) || basePp <= 0) return 0;
@@ -176,14 +255,12 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
         }
 
         nextUps[slotIndex] = Math.max(0, Math.min(3, clampNumber(value, 0, 3)));
-        const basePp = Number(allMoves.find((m) => Number(m.id) === moveId)?.base_pp || 0);
+        const moveEntry = allMoves.find((m) => Number(m.id) === moveId) || movesMeta[String(moveId)];
+        const basePp = Number(moveEntry?.base_pp || 0);
         const nextMax = basePp > 0 ? basePp + Math.floor((basePp * nextUps[slotIndex]) / 5) : 0;
         const nextPp = [...(localPk.move_pp || [0, 0, 0, 0])];
-        if (isPcMon) {
-            nextPp[slotIndex] = nextMax;
-        } else {
-            nextPp[slotIndex] = Math.max(0, Math.min(nextMax, Number(nextPp[slotIndex] || 0)));
-        }
+        // Automatically top up current PP to match new max usable PP
+        nextPp[slotIndex] = nextMax;
         setLocalPk({ ...localPk, move_pp_ups: nextUps, move_pp: nextPp });
     };
 
@@ -196,7 +273,8 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
             nextPp[slotIndex] = 0;
         } else {
             nextUps[slotIndex] = 3;
-            const basePp = Number(allMoves.find((m) => Number(m.id) === moveId)?.base_pp || 0);
+            const moveEntry = allMoves.find((m) => Number(m.id) === moveId) || movesMeta[String(moveId)];
+            const basePp = Number(moveEntry?.base_pp || 0);
             const maxPp = basePp > 0 ? basePp + Math.floor((basePp * 3) / 5) : 0;
             nextPp[slotIndex] = maxPp;
         }
@@ -270,6 +348,7 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
                 abilities: allAbilities,
             },
             legitMode,
+            hackedMode,
             levelFallback: Number(localPk.level || initialLevel || 1),
         });
 
@@ -400,6 +479,79 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
         [localPk.ivs],
     );
 
+    const baseStats = speciesBaseStats?.[String(localPk.species_id)] || null;
+
+    const natureIncDec = [
+        [null, null], ['Atk', 'Def'], ['Atk', 'Spe'], ['Atk', 'SpA'], ['Atk', 'SpD'],
+        ['Def', 'Atk'], [null, null], ['Def', 'Spe'], ['Def', 'SpA'], ['Def', 'SpD'],
+        ['Spe', 'Atk'], ['Spe', 'Def'], [null, null], ['Spe', 'SpA'], ['Spe', 'SpD'],
+        ['SpA', 'Atk'], ['SpA', 'Def'], ['SpA', 'Spe'], [null, null], ['SpA', 'SpD'],
+        ['SpD', 'Atk'], ['SpD', 'Def'], ['SpD', 'Spe'], ['SpD', 'SpA'], [null, null],
+    ];
+    const [natureBoosted, natureDecreased] = natureIncDec[((Number(localPk.nature_id) % 25) + 25) % 25] || [null, null];
+
+    const statRows = useMemo(() => [
+        {
+            key: 'HP',
+            label: 'HP',
+            base: Number(baseStats?.hp ?? 0),
+            iv: Number(localPk.ivs?.HP ?? 0),
+            ev: Number(localPk.evs?.HP ?? 0),
+            stat: battleStats?.HP ?? 0,
+            natureMod: null,
+        },
+        {
+            key: 'Atk',
+            label: 'Atk',
+            base: Number(baseStats?.atk ?? 0),
+            iv: Number(localPk.ivs?.Atk ?? 0),
+            ev: Number(localPk.evs?.Atk ?? 0),
+            stat: battleStats?.Atk ?? 0,
+            natureMod: natureBoosted === 'Atk' ? 1.1 : (natureDecreased === 'Atk' ? 0.9 : 1.0),
+        },
+        {
+            key: 'Def',
+            label: 'Def',
+            base: Number(baseStats?.def ?? 0),
+            iv: Number(localPk.ivs?.Def ?? 0),
+            ev: Number(localPk.evs?.Def ?? 0),
+            stat: battleStats?.Def ?? 0,
+            natureMod: natureBoosted === 'Def' ? 1.1 : (natureDecreased === 'Def' ? 0.9 : 1.0),
+        },
+        {
+            key: 'SpA',
+            label: 'SpA',
+            base: Number(baseStats?.spa ?? 0),
+            iv: Number(localPk.ivs?.SpA ?? 0),
+            ev: Number(localPk.evs?.SpA ?? 0),
+            stat: battleStats?.SpA ?? 0,
+            natureMod: natureBoosted === 'SpA' ? 1.1 : (natureDecreased === 'SpA' ? 0.9 : 1.0),
+        },
+        {
+            key: 'SpD',
+            label: 'SpD',
+            base: Number(baseStats?.spd ?? 0),
+            iv: Number(localPk.ivs?.SpD ?? 0),
+            ev: Number(localPk.evs?.SpD ?? 0),
+            stat: battleStats?.SpD ?? 0,
+            natureMod: natureBoosted === 'SpD' ? 1.1 : (natureDecreased === 'SpD' ? 0.9 : 1.0),
+        },
+        {
+            key: 'Spe',
+            label: 'Spe',
+            base: Number(baseStats?.spe ?? 0),
+            iv: Number(localPk.ivs?.Spe ?? localPk.ivs?.Spd ?? 0),
+            ev: Number(localPk.evs?.Spe ?? localPk.evs?.Spd ?? 0),
+            stat: battleStats?.Spe ?? 0,
+            natureMod: natureBoosted === 'Spe' ? 1.1 : (natureDecreased === 'Spe' ? 0.9 : 1.0),
+        },
+    ], [baseStats, localPk.ivs, localPk.evs, battleStats, natureBoosted, natureDecreased]);
+
+    const totalBase = useMemo(() => statRows.reduce((sum, r) => sum + r.base, 0), [statRows]);
+    const totalIv = useMemo(() => statRows.reduce((sum, r) => sum + r.iv, 0), [statRows]);
+    const totalEv = useMemo(() => statRows.reduce((sum, r) => sum + r.ev, 0), [statRows]);
+    const totalBattleStat = useMemo(() => statRows.reduce((sum, r) => sum + (r.stat || 0), 0), [statRows]);
+
     return (
         <div
             className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 overflow-hidden"
@@ -428,7 +580,10 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
                             <h2 className="text-lg sm:text-xl font-bold truncate">{localPk.nickname}</h2>
                             <p className="text-xs text-slate-500 uppercase font-black">Pokemon Editor</p>
                         </div>
-                        <div className="w-10 h-10 bg-slate-900 rounded-xl border border-white/10 flex items-center justify-center overflow-hidden">
+                        <div
+                            className="w-10 h-10 bg-slate-900 rounded-xl border border-white/10 flex items-center justify-center overflow-hidden shrink-0"
+                            title={localPk.item_id > 0 ? `Held Item: ${currentItemName}` : 'No Held Item'}
+                        >
                             {canShowItemIcon ? (
                                 <img
                                     src={client.getItemIconUrl(localPk.item_id)}
@@ -440,8 +595,10 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
                                         }
                                     }}
                                 />
-                            ) : (
+                            ) : localPk.item_id > 0 ? (
                                 <span className="text-[9px] font-mono text-slate-500">#{localPk.item_id}</span>
+                            ) : (
+                                <span className="text-sm font-mono text-slate-600 select-none font-bold" title="No Held Item">—</span>
                             )}
                         </div>
                     </div>
@@ -528,60 +685,182 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
                     )}
 
                     {activeTab === 'stats' && (
-                        <div className="space-y-8">
-                            <section className="bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-blue-400/15 space-y-3" aria-label="Battle preview">
-                                <div className="flex items-baseline justify-between gap-3">
-                                    <h4 className="text-xs font-bold text-slate-200">Battle preview</h4>
-                                    <span className="text-[10px] text-slate-500">Level {previewLevel} · ROM base stats</span>
+                        <div className="space-y-6">
+                            {/* PKHeX-Style Comprehensive Stat Matrix & Battle Preview */}
+                            <section className="bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-blue-400/20 space-y-4" aria-label="Battle preview">
+                                <div className="flex items-center justify-between gap-3 flex-wrap">
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Stat Matrix & Battle Preview</h4>
+                                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-md font-mono font-bold border border-blue-500/20">
+                                            Lv. {previewLevel}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setAllIvs(31)}
+                                                className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
+                                                title="Set all IVs to 31"
+                                            >
+                                                31 ALL IV
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAllIvs(0)}
+                                                className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/10 hover:bg-slate-700 transition-colors"
+                                                title="Set all IVs to 0"
+                                            >
+                                                0 IV
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={clearAllEvs}
+                                                className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/10 hover:bg-slate-700 transition-colors"
+                                                title="Clear all EVs to 0"
+                                            >
+                                                0 EV
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 ml-1">
+                                            <span className="text-[10px] text-slate-400">Nature:</span>
+                                            <span className="text-[10px] font-bold text-slate-200 bg-slate-900/60 px-2 py-0.5 rounded border border-white/5">
+                                                {localPk.nature || 'Neutral'}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                                {battleStats ? (
-                                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10">
-                                        {[
-                                            ['HP', battleStats.HP], ['ATK', battleStats.Atk], ['DEF', battleStats.Def],
-                                            ['SPA', battleStats.SpA], ['SPD', battleStats.SpD], ['SPE', battleStats.Spe],
-                                        ].map(([label, value]) => (
-                                            <div key={label} className="bg-slate-900/90 px-2 py-2.5 text-center">
-                                                <div className="text-[9px] font-bold text-slate-500">{label}</div>
-                                                <div className="text-base font-black tabular-nums text-blue-300">{value}</div>
-                                            </div>
-                                        ))}
+
+                                {baseStats ? (
+                                    <div className="overflow-x-auto rounded-xl border border-white/10 bg-slate-900/90 shadow-inner">
+                                        <table className="w-full text-left border-collapse text-xs">
+                                            <thead>
+                                                <tr className="border-b border-white/10 bg-slate-800/60 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                                    <th className="py-2.5 px-3">Stat</th>
+                                                    <th className="py-2.5 px-3 text-center">Base</th>
+                                                    <th className="py-2.5 px-3 text-center">IVs (0-31)</th>
+                                                    <th className="py-2.5 px-3 text-center">EVs (0-252)</th>
+                                                    <th className="py-2.5 px-3 text-right">Battle Stat</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5 font-mono">
+                                                {statRows.map((row) => {
+                                                    const isBoosted = row.natureMod === 1.1;
+                                                    const isDecreased = row.natureMod === 0.9;
+                                                    return (
+                                                        <tr
+                                                            key={row.key}
+                                                            className={`hover:bg-white/[0.02] transition-colors ${
+                                                                isBoosted ? 'bg-rose-500/5' : isDecreased ? 'bg-sky-500/5' : ''
+                                                            }`}
+                                                        >
+                                                            <td className="py-2 px-3 font-sans font-bold align-middle">
+                                                                <div className="flex items-center gap-1.5 min-h-[2rem]">
+                                                                    <span className={
+                                                                        isBoosted ? 'text-rose-400 font-black' : (isDecreased ? 'text-sky-400 font-black' : 'text-slate-300')
+                                                                    }>
+                                                                        {row.label}
+                                                                    </span>
+                                                                    {isBoosted && (
+                                                                        <span className="text-[9px] bg-rose-500/20 text-rose-300 px-1 py-0.5 rounded font-mono font-bold tracking-tighter leading-none" title="Nature +10%">
+                                                                            ▲
+                                                                        </span>
+                                                                    )}
+                                                                    {isDecreased && (
+                                                                        <span className="text-[9px] bg-sky-500/20 text-sky-300 px-1 py-0.5 rounded font-mono font-bold tracking-tighter leading-none" title="Nature -10%">
+                                                                            ▼
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-2 px-3 text-center text-slate-400 font-bold align-middle">
+                                                                <span className="bg-slate-800/60 px-2 py-0.5 rounded border border-white/5 inline-block min-w-[2.5rem]">
+                                                                    {row.base}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-2 px-3 text-center align-middle">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max="31"
+                                                                    value={row.iv}
+                                                                    onChange={(e) => updateStat('ivs', row.key, e.target.value)}
+                                                                    className={`w-14 bg-slate-950/80 border rounded-lg text-center font-mono font-bold text-xs py-1 transition-colors outline-none focus:ring-1 focus:ring-blue-400 ${
+                                                                        row.iv === 31 ? 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10' : 'text-slate-200 border-white/10'
+                                                                    }`}
+                                                                />
+                                                            </td>
+                                                            <td className="py-2 px-3 text-center align-middle">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max="252"
+                                                                    value={row.ev}
+                                                                    onChange={(e) => updateStat('evs', row.key, e.target.value)}
+                                                                    className={`w-16 bg-slate-950/80 border rounded-lg text-center font-mono font-bold text-xs py-1 transition-colors outline-none focus:ring-1 focus:ring-blue-400 ${
+                                                                        row.ev === 252 ? 'text-blue-400 border-blue-500/40 bg-blue-500/10' : row.ev > 0 ? 'text-slate-200 border-white/20' : 'text-slate-500 border-white/10'
+                                                                    }`}
+                                                                />
+                                                            </td>
+                                                            <td className="py-2 px-3 text-right align-middle">
+                                                                <span className="text-sm font-black text-blue-300 tabular-nums">
+                                                                    {row.stat}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr className="border-t border-white/10 bg-slate-800/40 text-[11px] font-bold text-slate-300">
+                                                    <td className="py-2.5 px-3 uppercase text-[10px] font-black tracking-wider text-slate-400 align-middle">Total</td>
+                                                    <td className="py-2.5 px-3 text-center font-mono text-amber-300 align-middle">
+                                                        {totalBase}
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-center font-mono align-middle">
+                                                        <span className={totalIv === 186 ? 'text-emerald-400 font-bold' : 'text-slate-300'}>
+                                                            {totalIv}/186
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-center font-mono align-middle">
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                            !hackedMode && totalEv >= EV_TOTAL_MAX
+                                                                ? 'bg-emerald-500/20 text-emerald-300'
+                                                                : hackedMode
+                                                                ? 'bg-purple-500/20 text-purple-300'
+                                                                : 'text-blue-300 bg-blue-500/10'
+                                                        }`}>
+                                                            {!hackedMode ? `${totalEv} / ${EV_TOTAL_MAX}` : `${totalEv} (Uncapped)`}
+                                                        </span>
+                                                        {!hackedMode && (
+                                                            <span className="block text-[9px] font-normal text-slate-400 mt-0.5">
+                                                                Remaining: <strong className="text-emerald-400">{remainingEvs}</strong>
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-right font-mono font-black text-blue-400 align-middle">
+                                                        {totalBattleStat}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
                                     </div>
                                 ) : (
                                     <p className="text-[11px] text-slate-500">ROM base stats are unavailable for this species.</p>
                                 )}
-                                <div className="flex items-center justify-between gap-3 rounded-lg bg-violet-500/10 px-3 py-2 text-xs">
-                                    <span className="text-slate-400">Hidden Power type</span>
-                                    <strong className="text-violet-300">{hiddenPowerType || 'Unknown'}</strong>
-                                </div>
-                                <p className="text-[10px] leading-relaxed text-slate-500">
-                                    Preview only. Values update with level, nature, IVs, and EVs; battle effects are not included.
-                                </p>
-                            </section>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div>
-                                    <p className="mb-3 text-[10px] text-slate-400">Ctrl+click a stat slider for max; Alt+click for zero. The 0 and MAX buttons work with touch and keyboard.</p>
-                                    <StatGroup title="IVs (0-31)" type="ivs" data={localPk.ivs} update={updateStat} max={31} />
-                                </div>
-                                <div className="space-y-4">
-                                    <StatGroup title="EVs (0-252)" type="evs" data={localPk.evs} update={updateStat} max={252} />
-                                    <div className="rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-[10px] text-slate-300 space-y-1">
-                                        <p>
-                                            Legit Mode: <span className={`font-bold ${legitMode ? 'text-emerald-300' : 'text-slate-400'}`}>{legitMode ? 'ON' : 'OFF'}</span>
-                                        </p>
-                                        <p>
-                                            Total EV: <span className={`font-bold ${legitMode && totalEvs >= EV_TOTAL_MAX ? 'text-amber-300' : 'text-blue-300'}`}>{totalEvs}/{EV_TOTAL_MAX}</span>
-                                        </p>
-                                        {legitMode ? (
-                                            <p>
-                                                Remaining: <span className="font-bold text-emerald-300">{remainingEvs}</span>
-                                            </p>
-                                        ) : (
-                                            <p className="text-slate-400">Total cap is disabled while Legit Mode is OFF.</p>
-                                        )}
+                                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-slate-400">Hidden Power:</span>
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-violet-500/15 border border-violet-500/30 text-xs font-bold text-violet-300">
+                                            {hiddenPowerType || 'Unknown'}
+                                        </span>
                                     </div>
+                                    <p className="text-[10px] text-slate-500 italic">
+                                        Preview based on ROM base stats at Lv. {previewLevel} with {localPk.nature || 'Neutral'} nature.
+                                    </p>
                                 </div>
-                            </div>
+                            </section>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/5 space-y-4">
@@ -610,19 +889,22 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
                                         </div>
                                         <div className="bg-slate-900/70 border border-white/10 rounded-xl p-3">
                                             <p className="text-[10px] uppercase font-black text-slate-500 mb-2">Growth Curve</p>
-                                            <select
-                                                value={levelGrowthMode}
-                                                onChange={(e) => {
-                                                    setLevelGrowthMode(e.target.value);
-                                                    setLevelDirty(true);
-                                                }}
-                                                className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-slate-300 outline-none focus:border-blue-500/50"
-                                            >
-                                                <option value="auto">Default from species (recommended)</option>
-                                                {GROWTH_OPTIONS.map((opt) => (
-                                                    <option key={opt.id} value={String(opt.id)}>{opt.id} - {opt.label}</option>
-                                                ))}
-                                            </select>
+                                            <div className="relative">
+                                                <select
+                                                    value={levelGrowthMode}
+                                                    onChange={(e) => {
+                                                        setLevelGrowthMode(e.target.value);
+                                                        setLevelDirty(true);
+                                                    }}
+                                                    className="w-full appearance-none bg-slate-900 border border-white/10 rounded-lg px-3 py-2 pr-8 text-xs text-slate-300 outline-none focus:border-blue-500/50 cursor-pointer"
+                                                >
+                                                    <option value="auto">Default from species (recommended)</option>
+                                                    {GROWTH_OPTIONS.map((opt) => (
+                                                        <option key={opt.id} value={String(opt.id)}>{opt.id} - {opt.label}</option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            </div>
                                         </div>
                                     </div>
                                     {isPcMon ? (
@@ -640,15 +922,24 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block text-center">
                                         Pokemon Nature
                                     </label>
-                                    <select
-                                        value={localPk.nature_id}
-                                        onChange={(e) => setLocalPk({...localPk, nature_id: parseInt(e.target.value)})}
-                                        className="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-sm text-blue-400 font-bold outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
-                                    >
-                                        {NATURES.map((name, i) => (
-                                            <option key={i} value={i}>{name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="relative">
+                                        <select
+                                            value={localPk.nature_id}
+                                            onChange={(e) => setLocalPk({...localPk, nature_id: parseInt(e.target.value)})}
+                                            className="w-full appearance-none bg-slate-900 border border-white/10 rounded-xl px-4 py-3 pr-10 text-sm text-blue-400 font-bold outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
+                                        >
+                                            {NATURE_GROUPS.map((g) => (
+                                                <optgroup key={g.group} label={g.group} className="bg-slate-950 text-slate-400 font-bold">
+                                                    {g.items.map((n) => (
+                                                        <option key={n.id} value={n.id} className="bg-slate-900 text-slate-100 font-medium">
+                                                            {n.label}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            ))}
+                                        </select>
+                                        <ChevronDown size={18} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-blue-400" />
+                                    </div>
                                     <p className="text-[9px] text-center text-slate-500 italic">Changing nature will modify the Pokemon PID in the save file.</p>
                                 </div>
                             </div>
@@ -696,107 +987,47 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
                     )}
 
                     {activeTab === 'moves' && (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {localPk.moves.map((moveId, idx) => (
-                                    <div key={idx}
-                                         className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 space-y-3">
-                                        <label
-                                            className="text-[10px] font-black text-slate-500 uppercase">Move {idx + 1}</label>
-
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-2.5 text-slate-500" size={14}/>
-                                            <input
-                                                type="text"
-                                                placeholder="Search by name or ID..."
-                                                value={searchTerm[idx]}
-                                                onChange={(e) => {
-                                                    const s = [...searchTerm];
-                                                    s[idx] = e.target.value;
-                                                    setSearchTerm(s);
-                                                }}
-                                                className="w-full bg-slate-900 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-xs"
-                                            />
-                                        </div>
-
-                                        {searchTerm[idx].length > 1 ? (
-                                            <div
-                                                className="max-h-32 overflow-y-auto bg-slate-900 rounded-xl border border-blue-500/30">
-                                                {allMoves
-                                                    .filter(m => m.name.toLowerCase().includes(searchTerm[idx].toLowerCase()) || m.id.toString() === searchTerm[idx])
-                                                    .slice(0, 10)
-                                                    .map(m => (
-                                                        <button
-                                                            key={m.id}
-                                                            onClick={() => updateMove(idx, m.id)}
-                                                            className="w-full text-left px-4 py-2 text-xs hover:bg-blue-600 transition-colors border-b border-white/5"
-                                                        >
-                                                            <span
-                                                                className="text-blue-400 font-mono mr-2">{m.id}</span> {m.name}
-                                                        </button>
-                                                    ))
-                                                }
-                                            </div>
-                                        ) : (
-                                            <div
-                                                className="flex justify-between items-center bg-slate-900/50 p-2 rounded-lg border border-white/5">
-                                                <span className="text-xs font-bold text-blue-400">
-                                                    {allMoves.find(m => m.id === moveId)?.name || "--- Empty ---"}
-                                                </span>
-                                                <span
-                                                    className="text-[10px] font-mono text-slate-600">ID: {moveId}</span>
-                                            </div>
-                                        )}
-
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div className="bg-slate-900/50 p-2 rounded-lg border border-white/5">
-                                                <label className="text-[10px] uppercase text-slate-500 font-black">PP</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    max={getSlotMaxPp(idx)}
-                                                    value={Number(localPk.move_pp?.[idx] || 0)}
-                                                    onChange={(e) => updateMovePp(idx, e.target.value)}
-                                                    className="mt-1 w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-xs"
-                                                    disabled={Number(moveId || 0) <= 0 || isPcMon}
-                                                />
-                                            </div>
-                                            <div className="bg-slate-900/50 p-2 rounded-lg border border-white/5">
-                                                <label className="text-[10px] uppercase text-slate-500 font-black">PP Up</label>
-                                                <select
-                                                    value={Number(localPk.move_pp_ups?.[idx] || 0)}
-                                                    onChange={(e) => updateMovePpUps(idx, e.target.value)}
-                                                    className="mt-1 w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-xs"
-                                                    disabled={Number(moveId || 0) <= 0}
-                                                >
-                                                    <option value={0}>0</option>
-                                                    <option value={1}>1</option>
-                                                    <option value={2}>2</option>
-                                                    <option value={3}>3</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-between text-[10px] text-slate-400">
-                                            <span>
-                                                Usable: <span className="font-bold text-blue-300">{Number(localPk.move_pp?.[idx] || 0)}/{getSlotMaxPp(idx)}</span>
-                                            </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => setMoveMaxPp(idx)}
-                                                disabled={Number(moveId || 0) <= 0}
-                                                className="px-2 py-1 rounded-md bg-blue-600/80 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-bold"
-                                            >
-                                                MAX PP
-                                            </button>
-                                        </div>
-                                        {isPcMon && (
-                                            <p className="text-[9px] text-slate-500">PC boxes keep PP Up (max state). Current PP is restored from max when withdrawn.</p>
-                                        )}
+                        <div className="space-y-4">
+                            <section className="bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-white/5 space-y-4">
+                                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                                    <div>
+                                        <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Current Moves</h4>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">Select up to 4 moves, edit PP, and assign PP Ups (0-3).</p>
                                     </div>
-                                ))}
-                            </div>
+                                    <button
+                                        type="button"
+                                        onClick={setMaxAllPp}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95"
+                                    >
+                                        <Zap size={12} /> Max All PP
+                                    </button>
+                                </div>
 
+                                <div className="space-y-3">
+                                    {[0, 1, 2, 3].map((slotIdx) => (
+                                        <PkHexMoveRow
+                                            key={slotIdx}
+                                            slotIndex={slotIdx}
+                                            moveId={Number(localPk.moves?.[slotIdx] || 0)}
+                                            movePp={Number(localPk.move_pp?.[slotIdx] || 0)}
+                                            movePpUp={Number(localPk.move_pp_ups?.[slotIdx] || 0)}
+                                            allMoves={allMoves}
+                                            movesMeta={movesMeta}
+                                            onMoveChange={updateMove}
+                                            onPpChange={updateMovePp}
+                                            onPpUpChange={updateMovePpUps}
+                                            onMaxPp={setMoveMaxPp}
+                                            isPcMon={isPcMon}
+                                        />
+                                    ))}
+                                </div>
+
+                                {isPcMon && (
+                                    <p className="text-[10px] text-slate-400 italic pt-1">
+                                        PC boxes preserve PP Ups (maximum usable PP). Current PP is automatically restored when withdrawn into your party.
+                                    </p>
+                                )}
+                            </section>
                         </div>
                     )}
 
@@ -1038,8 +1269,10 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
                                                         }
                                                     }}
                                                 />
-                                            ) : (
+                                            ) : localPk.item_id > 0 ? (
                                                 <span className="text-[9px] font-mono text-slate-500">#{localPk.item_id}</span>
+                                            ) : (
+                                                <span className="text-sm font-mono text-slate-600 select-none font-bold">—</span>
                                             )}
                                         </div>
                                     </div>
@@ -1134,55 +1367,192 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, onClose
 };
 
 
-const StatGroup = ({title, type, data, update, max}) => {
-    const statsEntries = data ? Object.entries(data) : [];
-    const statLabels = {
-        HP: 'HP',
-        Atk: 'ATK',
-        Def: 'DEF',
-        SpA: 'SPA',
-        SpD: 'SPD',
-        Spd: 'SPE',
-        Spe: 'SPE',
-    };
-    const statOrder = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spd', 'Spe'];
-    const orderedStatsEntries = statOrder
-        .map((key) => (Object.prototype.hasOwnProperty.call(data || {}, key) ? [key, data[key]] : null))
-        .filter(Boolean);
+const PkHexMoveRow = ({
+    slotIndex,
+    moveId,
+    movePp,
+    movePpUp,
+    allMoves,
+    movesMeta,
+    onMoveChange,
+    onPpChange,
+    onPpUpChange,
+    onMaxPp,
+    isPcMon,
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchFilter, setSearchFilter] = useState('');
+    const containerRef = useRef(null);
+
+    const currentMove = useMemo(() => {
+        if (!moveId || moveId <= 0) return null;
+        return allMoves.find((m) => Number(m.id) === Number(moveId)) || { id: moveId, name: `Move #${moveId}` };
+    }, [moveId, allMoves]);
+
+    const meta = movesMeta[String(moveId)] || null;
+    const typeName = meta?.type || 'Normal';
+    const typeStyle = TYPE_STYLES[typeName] || TYPE_STYLES.Normal;
+    const typeAbbr = TYPE_ABBR[typeName] || (typeName ? typeName.slice(0, 3).toUpperCase() : '---');
+
+    const basePp = Number(meta?.base_pp || currentMove?.base_pp || 0);
+    const ppUp = Math.max(0, Math.min(3, Number(movePpUp || 0)));
+    const maxUsablePp = basePp > 0 ? basePp + Math.floor((basePp * ppUp) / 5) : 0;
+
+    const filteredMoves = useMemo(() => {
+        if (!isOpen) return [];
+        const q = searchFilter.trim().toLowerCase();
+        if (!q) {
+            return allMoves.slice(0, 30);
+        }
+        return allMoves
+            .filter((m) => {
+                const name = String(m.name || '').toLowerCase();
+                return name.includes(q) || String(m.id) === q;
+            })
+            .slice(0, 30);
+    }, [allMoves, searchFilter, isOpen]);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                setIsOpen(false);
+            }
+        };
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
 
     return (
-        <div className="space-y-4">
-            <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">{title}</h4>
-            {(orderedStatsEntries.length > 0 ? orderedStatsEntries : statsEntries).map(([stat, val]) => (
-                <div key={stat} className="flex items-center gap-2 sm:gap-4">
-                    <span className="w-8 text-[10px] font-bold text-slate-400 uppercase">{statLabels[stat] || stat}</span>
-                    <input
-                        type="range" min="0" max={max} value={val}
-                        aria-label={`${type === 'ivs' ? 'IV' : 'EV'} ${statLabels[stat] || stat}`}
-                        onChange={(e) => update(type, stat, e.target.value)}
-                        onClick={(e) => {
-                            if (e.ctrlKey || e.altKey) {
-                                update(type, stat, e.altKey ? 0 : max);
-                            }
-                        }}
-                        className="min-w-0 flex-1 accent-blue-500"
-                    />
-                    <input
-                        type="number" min="0" max={max} value={val}
-                        aria-label={`${type === 'ivs' ? 'IV' : 'EV'} ${statLabels[stat] || stat} value`}
-                        onChange={(e) => update(type, stat, e.target.value)}
-                        className="w-14 bg-slate-900 border border-white/10 rounded-lg text-center text-xs py-1"
-                    />
-                    <div className="flex gap-1">
-                        <button type="button" onClick={() => update(type, stat, 0)}
-                            aria-label={`Set ${type === 'ivs' ? 'IV' : 'EV'} ${statLabels[stat] || stat} to zero`}
-                            className="rounded-md border border-white/10 px-1.5 py-1 text-[10px] text-slate-300 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-blue-400">0</button>
-                        <button type="button" onClick={() => update(type, stat, max)}
-                            aria-label={`Set ${type === 'ivs' ? 'IV' : 'EV'} ${statLabels[stat] || stat} to maximum`}
-                            className="rounded-md border border-white/10 px-1.5 py-1 text-[10px] text-slate-300 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-blue-400">MAX</button>
+        <div ref={containerRef} className="relative flex items-center gap-2 sm:gap-3 p-2 bg-slate-900/50 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+            {/* Type badge on left */}
+            <div
+                className={`w-12 h-9 rounded-lg flex items-center justify-center text-[10px] font-black uppercase tracking-wider shrink-0 border ${
+                    moveId > 0 && meta
+                        ? `${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`
+                        : 'bg-slate-900 border-white/10 text-slate-500'
+                }`}
+                title={meta?.type ? `Type: ${meta.type}` : 'No Move'}
+            >
+                {moveId > 0 && meta ? typeAbbr : '---'}
+            </div>
+
+            {/* Move Search / Combobox */}
+            <div className="relative flex-1 min-w-0">
+                <button
+                    type="button"
+                    onClick={() => {
+                        setIsOpen((prev) => !prev);
+                        setSearchFilter('');
+                    }}
+                    className="w-full flex items-center justify-between bg-slate-900 hover:bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-xs text-left transition-colors"
+                >
+                    <span className={`truncate font-bold ${moveId > 0 ? 'text-slate-100' : 'text-slate-500'}`}>
+                        {currentMove ? currentMove.name : '--- Empty ---'}
+                    </span>
+                    <ChevronDown size={14} className="text-slate-400 shrink-0 ml-1.5" />
+                </button>
+
+                {isOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-slate-900 border border-blue-500/40 rounded-xl shadow-2xl overflow-hidden max-h-56 flex flex-col">
+                        <div className="p-2 border-b border-white/10 bg-slate-950">
+                            <div className="relative">
+                                <Search size={12} className="absolute left-2.5 top-2.5 text-slate-500" />
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    placeholder="Search move by name or ID..."
+                                    value={searchFilter}
+                                    onChange={(e) => setSearchFilter(e.target.value)}
+                                    className="w-full bg-slate-900 border border-white/10 rounded-lg pl-7 pr-2 py-1 text-xs text-slate-200 outline-none focus:border-blue-500"
+                                />
+                            </div>
+                        </div>
+                        <div className="overflow-y-auto flex-1 divide-y divide-white/5">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onMoveChange(slotIndex, 0);
+                                    setIsOpen(false);
+                                }}
+                                className="w-full text-left px-3 py-2 text-xs text-slate-500 hover:bg-white/5 hover:text-slate-300 font-semibold"
+                            >
+                                --- Empty ---
+                            </button>
+                            {filteredMoves.map((m) => {
+                                const mMeta = movesMeta[String(m.id)];
+                                const mStyle = TYPE_STYLES[mMeta?.type] || TYPE_STYLES.Normal;
+                                const mAbbr = TYPE_ABBR[mMeta?.type] || (mMeta?.type ? mMeta.type.slice(0, 3).toUpperCase() : '');
+                                return (
+                                    <button
+                                        key={m.id}
+                                        type="button"
+                                        onClick={() => {
+                                            onMoveChange(slotIndex, m.id);
+                                            setIsOpen(false);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-blue-600/30 flex items-center justify-between gap-2 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <span className="text-[10px] font-mono text-blue-400 w-7 shrink-0">{m.id}</span>
+                                            <span className="font-bold text-slate-200 truncate">{m.name}</span>
+                                        </div>
+                                        {mMeta && (
+                                            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${mStyle.bg} ${mStyle.text} ${mStyle.border} shrink-0`}>
+                                                {mAbbr}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
-            ))}
+                )}
+            </div>
+
+            {/* PP Input */}
+            <div className="flex items-center gap-1 shrink-0">
+                <input
+                    type="number"
+                    min="0"
+                    max={maxUsablePp}
+                    value={movePp}
+                    disabled={moveId <= 0 || isPcMon}
+                    onChange={(e) => onPpChange(slotIndex, e.target.value)}
+                    className="w-12 bg-slate-900 border border-white/10 rounded-lg text-center font-mono font-bold text-xs py-1.5 outline-none focus:border-blue-400 disabled:opacity-40"
+                    title={`Current PP (max ${maxUsablePp})`}
+                />
+                <span className="text-[10px] font-mono text-slate-500">/{maxUsablePp}</span>
+            </div>
+
+            {/* Ups Select */}
+            <div className="shrink-0 relative">
+                <select
+                    value={movePpUp}
+                    disabled={moveId <= 0}
+                    onChange={(e) => onPpUpChange(slotIndex, e.target.value)}
+                    className="w-13 appearance-none bg-slate-900 border border-white/10 rounded-lg text-center font-mono font-bold text-xs py-1.5 pl-2 pr-4 outline-none focus:border-blue-400 disabled:opacity-40 cursor-pointer"
+                    title="PP Ups (0-3)"
+                >
+                    <option value={0}>0</option>
+                    <option value={1}>1</option>
+                    <option value={2}>2</option>
+                    <option value={3}>3</option>
+                </select>
+                <ChevronDown size={11} className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            </div>
+
+            {/* Quick Max Button */}
+            <button
+                type="button"
+                onClick={() => onMaxPp(slotIndex)}
+                disabled={moveId <= 0}
+                className="px-2.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 rounded-lg text-[9px] font-bold uppercase tracking-wider disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
+                title="Max PP (3 PP Ups + Full PP)"
+            >
+                Max
+            </button>
         </div>
     );
 };

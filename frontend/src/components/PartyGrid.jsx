@@ -34,6 +34,7 @@ const PartyGrid = ({ client, onEditPokemon }) => {
                     key={pk.index}
                     pokemon={pk}
                     getPokemonIconUrl={client.getPokemonIconUrl}
+                    getItemIconUrl={client.getItemIconUrl}
                     onEdit={() => onEditPokemon(pk)}
                 />
             ))}

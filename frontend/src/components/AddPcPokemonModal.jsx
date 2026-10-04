@@ -3,7 +3,7 @@ import { Search, X, Download, CircleHelp } from 'lucide-react';
 import { clampLevel, parseShowdownSet, resolveShowdownSet } from '../core/showdownImport.js';
 
 
-export default function AddPcPokemonModal({ client, target, onClose, onConfirm, legitMode = false }) {
+export default function AddPcPokemonModal({ client, target, onClose, onConfirm, legitMode = false, hackedMode = false }) {
     const boxLabel = Number(target?.box) === 26 ? 'Preset' : `Box ${target?.box}`;
     const [allSpecies, setAllSpecies] = useState([]);
     const [allMoves, setAllMoves] = useState([]);
@@ -87,6 +87,7 @@ export default function AddPcPokemonModal({ client, target, onClose, onConfirm, 
                 abilities: allAbilities,
             },
             legitMode,
+            hackedMode,
             levelFallback: 5,
         });
 

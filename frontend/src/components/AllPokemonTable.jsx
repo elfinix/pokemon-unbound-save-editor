@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw, ChevronDown } from 'lucide-react';
 import { NATURES } from '../core/showdownImport.js';
 import { POKEMON_ICON_FALLBACK_URL } from '../core/iconResolver.js';
 import { ALL_POKEMON_BOXES } from '../services/allPokemon.js';
@@ -192,17 +192,23 @@ export default function AllPokemonTable({ client }) {
                     <input type="search" value={query} placeholder="Search name, species or location" onChange={(event) => { setQuery(event.target.value); resetPage(); }}
                         className="w-full rounded-lg border border-slate-600 bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-100 outline-none focus:border-blue-400" />
                 </label>
-                <label className="sr-only" htmlFor="all-pokemon-source">Location</label>
-                <select id="all-pokemon-source" value={source} onChange={(event) => { setSource(event.target.value); setBox('all'); resetPage(); }}
-                    className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-400">
-                    <option value="all">Party and PC</option><option value="party">Party only</option><option value="pc">PC only</option>
-                </select>
-                <label className="sr-only" htmlFor="all-pokemon-box">Box</label>
-                <select id="all-pokemon-box" value={box} disabled={source === 'party'} onChange={(event) => { setBox(event.target.value); resetPage(); }}
-                    className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-400 disabled:opacity-50">
-                    <option value="all">All boxes</option>
-                    {ALL_POKEMON_BOXES.map((id) => <option key={id} value={id}>{id === 26 ? 'Preset' : `Box ${id}`}</option>)}
-                </select>
+                <div className="relative">
+                    <label className="sr-only" htmlFor="all-pokemon-source">Location</label>
+                    <select id="all-pokemon-source" value={source} onChange={(event) => { setSource(event.target.value); setBox('all'); resetPage(); }}
+                        className="appearance-none rounded-lg border border-slate-600 bg-slate-900 pl-3 pr-8 py-2 text-sm text-slate-100 focus:border-blue-400 cursor-pointer outline-none">
+                        <option value="all">Party and PC</option><option value="party">Party only</option><option value="pc">PC only</option>
+                    </select>
+                    <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                </div>
+                <div className="relative">
+                    <label className="sr-only" htmlFor="all-pokemon-box">Box</label>
+                    <select id="all-pokemon-box" value={box} disabled={source === 'party'} onChange={(event) => { setBox(event.target.value); resetPage(); }}
+                        className="appearance-none rounded-lg border border-slate-600 bg-slate-900 pl-3 pr-8 py-2 text-sm text-slate-100 focus:border-blue-400 disabled:opacity-50 cursor-pointer outline-none">
+                        <option value="all">All boxes</option>
+                        {ALL_POKEMON_BOXES.map((id) => <option key={id} value={id}>{id === 26 ? 'Preset' : `Box ${id}`}</option>)}
+                    </select>
+                    <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                </div>
                 <label className="flex items-center gap-2 px-1 text-sm text-slate-200">
                     <input type="checkbox" checked={shinyOnly} onChange={(event) => { setShinyOnly(event.target.checked); resetPage(); }} className="accent-blue-500" /> Shiny
                 </label>

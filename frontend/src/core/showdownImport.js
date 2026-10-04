@@ -9,6 +9,59 @@ export const NATURES = [
     'Calm', 'Gentle', 'Sassy', 'Careful', 'Quirky',
 ];
 
+export const NATURE_GROUPS = [
+    {
+        group: '+Attack',
+        items: [
+            { id: 0, name: 'Hardy', mod: 'Neutral', label: 'Hardy (Neutral)' },
+            { id: 1, name: 'Lonely', mod: '+Atk, -Def', label: 'Lonely (+Atk, -Def)' },
+            { id: 2, name: 'Brave', mod: '+Atk, -Spe', label: 'Brave (+Atk, -Spe)' },
+            { id: 3, name: 'Adamant', mod: '+Atk, -SpA', label: 'Adamant (+Atk, -SpA)' },
+            { id: 4, name: 'Naughty', mod: '+Atk, -SpD', label: 'Naughty (+Atk, -SpD)' },
+        ],
+    },
+    {
+        group: '+Defense',
+        items: [
+            { id: 5, name: 'Bold', mod: '+Def, -Atk', label: 'Bold (+Def, -Atk)' },
+            { id: 6, name: 'Docile', mod: 'Neutral', label: 'Docile (Neutral)' },
+            { id: 7, name: 'Relaxed', mod: '+Def, -Spe', label: 'Relaxed (+Def, -Spe)' },
+            { id: 8, name: 'Impish', mod: '+Def, -SpA', label: 'Impish (+Def, -SpA)' },
+            { id: 9, name: 'Lax', mod: '+Def, -SpD', label: 'Lax (+Def, -SpD)' },
+        ],
+    },
+    {
+        group: '+Speed',
+        items: [
+            { id: 10, name: 'Timid', mod: '+Spe, -Atk', label: 'Timid (+Spe, -Atk)' },
+            { id: 11, name: 'Hasty', mod: '+Spe, -Def', label: 'Hasty (+Spe, -Def)' },
+            { id: 12, name: 'Serious', mod: 'Neutral', label: 'Serious (Neutral)' },
+            { id: 13, name: 'Jolly', mod: '+Spe, -SpA', label: 'Jolly (+Spe, -SpA)' },
+            { id: 14, name: 'Naive', mod: '+Spe, -SpD', label: 'Naive (+Spe, -SpD)' },
+        ],
+    },
+    {
+        group: '+Sp. Atk',
+        items: [
+            { id: 15, name: 'Modest', mod: '+SpA, -Atk', label: 'Modest (+SpA, -Atk)' },
+            { id: 16, name: 'Mild', mod: '+SpA, -Def', label: 'Mild (+SpA, -Def)' },
+            { id: 17, name: 'Quiet', mod: '+SpA, -Spe', label: 'Quiet (+SpA, -Spe)' },
+            { id: 18, name: 'Bashful', mod: 'Neutral', label: 'Bashful (Neutral)' },
+            { id: 19, name: 'Rash', mod: '+SpA, -SpD', label: 'Rash (+SpA, -SpD)' },
+        ],
+    },
+    {
+        group: '+Sp. Def',
+        items: [
+            { id: 20, name: 'Calm', mod: '+SpD, -Atk', label: 'Calm (+SpD, -Atk)' },
+            { id: 21, name: 'Gentle', mod: '+SpD, -Def', label: 'Gentle (+SpD, -Def)' },
+            { id: 22, name: 'Sassy', mod: '+SpD, -Spe', label: 'Sassy (+SpD, -Spe)' },
+            { id: 23, name: 'Careful', mod: '+SpD, -SpA', label: 'Careful (+SpD, -SpA)' },
+            { id: 24, name: 'Quirky', mod: 'Neutral', label: 'Quirky (Neutral)' },
+        ],
+    },
+];
+
 const IV_STAT_MAX = 31;
 const EV_STAT_MAX = 252;
 const EV_TOTAL_MAX = 510;
@@ -281,7 +334,7 @@ const resolveSpeciesRow = ({ speciesInput, speciesLookup, speciesRows, warnings,
     return chosen;
 };
 
-export const resolveShowdownSet = ({ parsed, catalogs, legitMode = false, levelFallback = 5 }) => {
+export const resolveShowdownSet = ({ parsed, catalogs, hackedMode = false, levelFallback = 5 }) => {
     const blocking = [];
     const warnings = [...(parsed?.warnings || [])];
     const species = catalogs?.species || [];
@@ -364,8 +417,8 @@ export const resolveShowdownSet = ({ parsed, catalogs, legitMode = false, levelF
             blocking.push('EVs must stay in range 0..252 per stat.');
         }
         const total = vals.reduce((a, b) => a + b, 0);
-        if (legitMode && total > EV_TOTAL_MAX) {
-            blocking.push(`Legit mode is ON: EV total ${total} exceeds 510.`);
+        if (!hackedMode && total > EV_TOTAL_MAX) {
+            blocking.push(`EV total ${total} exceeds 510 (Hacked mode is OFF).`);
         }
     }
 

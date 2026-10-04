@@ -487,6 +487,50 @@ def load_databases():
         )
 
 
+DEFAULT_SAVE_FILE_PATH = os.getenv(
+    "DEFAULT_SAVE_PATH",
+    r"D:\Louis\Emulators\mGBA (GBA)\Pokemon Unbound Official Patch 2.1.1+\Pokemon Unbound.sav",
+)
+
+
+@app.post("/load-default")
+async def load_default_save():
+    """Load the configured default save file from disk into memory."""
+    path = Path(DEFAULT_SAVE_FILE_PATH)
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Default save file not found at: {DEFAULT_SAVE_FILE_PATH}",
+        )
+
+    try:
+        content = path.read_bytes()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read default save file: {e}")
+
+    current_save["data"] = bytearray(content)
+    current_save["original_data"] = bytes(content)
+    current_save["filename"] = path.name
+    current_save["pc_context"] = {
+        "sectors": [], "headers": {}, "originals": {}, "pc_buffer": None,
+        "preset_buffer": None, "mons": [], "fallback_box_starts": {},
+        "fallback_slot_offsets": {}, "absolute_touched_sectors": []
+    }
+    return {"message": f"Default save '{path.name}' loaded successfully!", "filename": path.name}
+
+
+@app.get("/default-save-raw")
+async def get_default_save_raw():
+    """Return raw bytes of default save file for client-side consumption."""
+    path = Path(DEFAULT_SAVE_FILE_PATH)
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Default save file not found at: {DEFAULT_SAVE_FILE_PATH}",
+        )
+    return FileResponse(path=str(path), media_type="application/octet-stream", filename=path.name)
+
+
 @app.post("/upload")
 async def upload_save(file: UploadFile = File(...)):
     """Load the .sav or .srm file into memory."""

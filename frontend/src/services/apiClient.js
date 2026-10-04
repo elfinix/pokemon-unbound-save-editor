@@ -165,6 +165,14 @@ const backendClient = {
         }
         return res.json();
     },
+    async loadDefaultSave() {
+        const res = await fetch(`${API_BASE}/load-default`, { method: "POST" });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || "Failed to load default save file");
+        }
+        return res.json();
+    },
     getMoney() {
         return backendJson("/money");
     },
@@ -478,6 +486,20 @@ const localClient = {
         itemNameMapCache = null;
         clearPcContext();
         await Promise.all([loadFile(file), loadCatalog()]);
+    },
+    async loadDefaultSave() {
+        const { clearPcContext, loadFile, loadCatalog } = await getLocalCoreModules();
+        const res = await fetch(`${API_BASE}/default-save-raw`);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Could not load default save from server (${res.status})`);
+        }
+        const blob = await res.blob();
+        const file = new File([blob], 'Pokemon Unbound.sav', { type: 'application/octet-stream' });
+        itemNameMapCache = null;
+        clearPcContext();
+        await Promise.all([loadFile(file), loadCatalog()]);
+        return { filename: file.name, message: 'Default save loaded successfully!' };
     },
     async getMoney() {
         const { readMoney, getBuffer } = await getLocalCoreModules();
