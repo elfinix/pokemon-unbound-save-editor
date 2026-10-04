@@ -4,6 +4,7 @@ import {
     resolvePokemonIconUrl,
 } from '../core/iconResolver.js';
 import { collectAllPokemon } from './allPokemon.js';
+import { logger } from '../utils/logger.js';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 const MODE_STORAGE_KEY = "runtime_mode";
@@ -308,6 +309,7 @@ const backendClient = {
     },
     async editParty(payload) {
         const slot = Number(payload.slot ?? payload.index ?? 0);
+        logger.party('[Backend] editParty sending payload', { slot, payload });
         return backendJson(`/party/${slot}/edit-full`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -327,6 +329,7 @@ const backendClient = {
         return backendJson(`/pc/writable-slots/${boxId}`);
     },
     editPcFull(payload) {
+        logger.pc('[Backend] editPcFull sending payload', payload);
         return backendJson("/pc/edit-full", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -334,6 +337,7 @@ const backendClient = {
         });
     },
     releasePc(payload) {
+        logger.pc('[Backend] releasePc sending payload', payload);
         return backendJson("/pc/release", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -341,6 +345,7 @@ const backendClient = {
         });
     },
     insertPc(payload) {
+        logger.pc('[Backend] insertPc sending payload', payload);
         return backendJson('/pc/insert', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -369,6 +374,7 @@ const backendClient = {
         return backendJson(`/bag/pocket?anchor_offset=${anchorOffset}&_ts=${Date.now()}`, { cache: "no-store" });
     },
     async updateBagItem(payload) {
+        logger.bag('[Backend] updateBagItem sending payload', payload);
         const res = await fetch(`${API_BASE}/bag/item/update`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -384,6 +390,7 @@ const backendClient = {
         return backendJson("/bag/pockets/bootstrap");
     },
     saveAll() {
+        logger.save('[Backend] saveAll triggered');
         return backendJson("/save-all", { method: "POST" });
     },
     async generateRtcRepairPack(brokenFile, fixedFile) {
@@ -659,6 +666,7 @@ const localClient = {
         if (nextPayload.species_id !== undefined && nextPayload.species_id !== null) {
             nextPayload.species_id = await ensureValidSpeciesId(nextPayload.species_id);
         }
+        logger.party('[Local] editParty buffered into in-memory save', nextPayload);
         const speciesMap = await getSpeciesMap();
         updateBuffer((next) => {
             editPartyMonFull(next, nextPayload, speciesMap);
@@ -725,6 +733,7 @@ const localClient = {
         if (nextPayload.species_id !== undefined && nextPayload.species_id !== null) {
             nextPayload.species_id = await ensureValidSpeciesId(nextPayload.species_id);
         }
+        logger.pc('[Local] editPcFull buffered into in-memory save', nextPayload);
         editPcMonFull(context, nextPayload, await getSpeciesMap());
         return { status: 'PC edit buffered' };
     },
@@ -741,6 +750,7 @@ const localClient = {
             context = loadPcContext(getBuffer());
             setPcContext(context);
         }
+        logger.pc('[Local] releasePc executed in PC context', payload);
         releasePcMon(context, payload || {});
         return { status: 'PC release buffered' };
     },
@@ -761,6 +771,7 @@ const localClient = {
         const speciesMap = await getSpeciesMap();
         const nextPayload = { ...(payload || {}) };
         nextPayload.species_id = await ensureValidSpeciesId(nextPayload.species_id);
+        logger.pc('[Local] insertPc executed in PC context', nextPayload);
         return insertPcMon(context, nextPayload, speciesMap);
     },
     async getMoves() {
@@ -795,6 +806,7 @@ const localClient = {
     },
     async updateBagItem(payload) {
         const { updateBuffer, writeSlot } = await getLocalCoreModules();
+        logger.bag('[Local] updateBagItem applied to bag context', payload);
         updateBuffer((next) => {
             writeSlot(
                 next,
@@ -812,6 +824,7 @@ const localClient = {
     },
     async saveAll() {
         const { updateBuffer, saveAll: commitSaveAll, getPcContext } = await getLocalCoreModules();
+        logger.save('[Local] saveAll syncing PC state and writing checksums');
         updateBuffer((next) => {
             commitSaveAll(next, getPcContext());
         });

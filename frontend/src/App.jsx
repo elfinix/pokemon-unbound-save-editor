@@ -9,6 +9,7 @@ import ResourcesModal from './components/ResourcesModal.jsx';
 import SaveReportModal from './components/SaveReportModal.jsx';
 import ConfirmModal from './components/ConfirmModal.jsx';
 import ToastContainer from './components/ToastContainer.jsx';
+import { logger } from './utils/logger.js';
 
 const PartyGrid = lazy(() => import('./components/PartyGrid'));
 const PCGrid = lazy(() => import('./components/PCGrid'));
@@ -133,6 +134,7 @@ export default function App() {
         if (!file) return;
 
         try {
+            logger.save('Uploading save file', { name: file.name, size: file.size });
             await client.uploadSave(file);
             const [mData, bpData] = await Promise.all([client.getMoney(), client.getBp()]);
             setMoney(Number(mData.money ?? 0));
@@ -140,7 +142,8 @@ export default function App() {
             setSaveExt(file.name.toLowerCase().endsWith('.srm') ? '.srm' : '.sav');
             setIsLoaded(true);
             showToast(`Save file '${file.name}' loaded successfully!`, 'success');
-        } catch {
+        } catch (err) {
+            logger.error('Save', 'Upload failed for current save file', err);
             showToast('Upload failed for current runtime mode.', 'error');
         }
     };
@@ -148,6 +151,7 @@ export default function App() {
     const handleLoadDefaultSave = async () => {
         try {
             setLoadingDefault(true);
+            logger.save('Loading default demo save file');
             await client.loadDefaultSave();
             const [mData, bpData] = await Promise.all([client.getMoney(), client.getBp()]);
             setMoney(Number(mData.money ?? 0));
@@ -156,6 +160,7 @@ export default function App() {
             setIsLoaded(true);
             showToast("Default save 'Pokemon Unbound.sav' loaded successfully!", 'success');
         } catch (err) {
+            logger.error('Save', 'Failed to load default save file', err);
             showToast(err?.message || 'Failed to load default save file.', 'error');
         } finally {
             setLoadingDefault(false);
@@ -163,6 +168,7 @@ export default function App() {
     };
 
     const handleTabChange = (tabId) => {
+        logger.save('Tab navigation', { from: activeTab, to: tabId });
         if (activeTab === 'bag' && tabId !== 'bag' && bagHasUnsavedChanges) {
             showConfirm({
                 title: 'Unsaved Bag Changes',
@@ -217,13 +223,14 @@ export default function App() {
                 payload.gender = updatedPk.gender;
             }
 
+            logger.party('Saving party Pokemon updates', { slot: payload.slot, species_id: payload.species_id, payload });
             await client.editParty(payload);
             await client.saveAll();
             setSelectedPokemon(null);
             setRefreshKey((prev) => prev + 1);
             showToast('Party Pokemon updated successfully!', 'success');
         } catch (err) {
-            console.error('Failed to save party Pokemon changes:', err);
+            logger.error('Party', 'Failed to save party Pokemon changes', err);
             showToast(err?.message ? `Failed to save party Pokemon: ${err.message}` : 'Failed to save party Pokemon changes.', 'error');
         }
     };
@@ -285,25 +292,28 @@ export default function App() {
                 payload.exp = getExpAtLevel(growthRate, targetLevel);
             }
 
+            logger.pc('Saving PC Pokemon updates', { box: payload.box, slot: payload.slot, species_id: payload.species_id, payload });
             await client.editPcFull(payload);
             await client.saveAll();
             setSelectedPokemon(null);
             setRefreshKey((prev) => prev + 1);
             showToast('PC Box updated successfully!', 'success');
         } catch (err) {
-            console.error('Failed to save PC Pokemon changes:', err);
+            logger.error('PC', 'Failed to save PC Pokemon changes', err);
             showToast(err?.message ? `Failed to save PC Box: ${err.message}` : 'Failed to save PC Box.', 'error');
         }
     };
 
     const handleInsertPcPokemon = async (payload) => {
         try {
+            logger.pc('Inserting Pokemon into PC box', payload);
             await client.insertPc(payload);
             await client.saveAll();
             setPcInsertTarget(null);
             setRefreshKey((prev) => prev + 1);
             showToast('Pokemon inserted successfully!', 'success');
-        } catch {
+        } catch (err) {
+            logger.error('PC', 'Failed to add Pokemon to PC box', err);
             showToast('Failed to add Pokemon to PC box.', 'error');
         }
     };
@@ -321,11 +331,13 @@ export default function App() {
             icon: Trash2,
             onConfirm: async () => {
                 try {
+                    logger.pc('Releasing Pokemon from PC box', { box, slot, species: pokemon?.species_name });
                     await client.releasePc({ box, slot });
                     await client.saveAll();
                     setRefreshKey((prev) => prev + 1);
                     showToast(`${label} was released successfully.`, 'success');
-                } catch {
+                } catch (err) {
+                    logger.error('PC', 'Failed to release Pokemon', err);
                     showToast('Failed to release Pokémon.', 'error');
                 }
             },
@@ -334,6 +346,7 @@ export default function App() {
 
     const handleUpdateResources = async (amount, bpAmount) => {
         try {
+            logger.save('Updating resources', { money: amount, bp: bpAmount });
             await Promise.all([client.updateMoney(amount), client.updateBp(bpAmount)]);
             const [mData, bpData] = await Promise.all([client.getMoney(), client.getBp()]);
             setMoney(Number(mData.money ?? amount));
@@ -341,12 +354,13 @@ export default function App() {
             setShowResourcesModal(false);
             showToast('Resources updated successfully!', 'success');
         } catch (err) {
-            console.error(err);
+            logger.error('Save', 'Failed to update resources', err);
             showToast('Failed to update resources.', 'error');
         }
     };
 
     const handleDownload = async () => {
+        logger.save('Opening save download report modal');
         setShowSaveReport(true);
         setSaveReport(null);
         setSaveReportError('');
@@ -354,7 +368,7 @@ export default function App() {
         try {
             setSaveReport(await client.getSaveReport());
         } catch (err) {
-            console.error(err);
+            logger.error('Save', 'Failed to inspect save for report', err);
             setSaveReportError('Could not inspect this save. Try again before downloading.');
         } finally {
             setSaveReportLoading(false);
@@ -364,10 +378,11 @@ export default function App() {
     const confirmDownload = async () => {
         if (!saveReport) return;
         try {
+            logger.save('Downloading modified save binary');
             await client.downloadSave();
             setShowSaveReport(false);
         } catch (err) {
-            console.error(err);
+            logger.error('Save', 'Download save failed', err);
             setSaveReportError('Download failed. Your in-memory save is still loaded.');
         }
     };
@@ -382,6 +397,7 @@ export default function App() {
             variant: 'danger',
             icon: LogOut,
             onConfirm: () => {
+                logger.save('Exited save file to main menu');
                 setIsLoaded(false);
                 setActiveTab('party');
                 setSelectedPokemon(null);
