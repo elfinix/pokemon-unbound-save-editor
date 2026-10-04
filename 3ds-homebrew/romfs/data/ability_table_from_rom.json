@@ -1,9 +1,9 @@
 {
-  "source_rom": "local_artifacts/Unbound.gba",
+  "source_rom": "Pokemon Unbound.gba",
   "table_base": 10707881,
   "entry_size": 17,
-  "ability_count": 254,
-  "inferred_count": 254,
+  "ability_count": 292,
+  "inferred_count": 292,
   "abilities": [
     {
       "ability_id": 1,
@@ -1528,6 +1528,234 @@
       "offset": 10712182,
       "name": "Pastel Veil",
       "raw_hex": "cad5e7e8d9e000d0d9dde0ffffffffffff"
+    },
+    {
+      "ability_id": 255,
+      "offset": 10712199,
+      "name": "-",
+      "raw_hex": "aeffffffffffffffffffffffffffffffff"
+    },
+    {
+      "ability_id": 256,
+      "offset": 10712216,
+      "name": "Air Lock",
+      "raw_hex": "bbdde600c6e3d7dfffffffffffffffffff"
+    },
+    {
+      "ability_id": 257,
+      "offset": 10712233,
+      "name": "Vital Spirit",
+      "raw_hex": "d0dde8d5e000cde4dde6dde8ffffffffff"
+    },
+    {
+      "ability_id": 258,
+      "offset": 10712250,
+      "name": "White Smoke",
+      "raw_hex": "d1dcdde8d900cde1e3dfd9ffffffffffff"
+    },
+    {
+      "ability_id": 259,
+      "offset": 10712267,
+      "name": "Pure Power",
+      "raw_hex": "cae9e6d900cae3ebd9e6ffffffffffffff"
+    },
+    {
+      "ability_id": 260,
+      "offset": 10712284,
+      "name": "Iron Barbs",
+      "raw_hex": "c3e6e3e200bcd5e6d6e7ffffffffffffff"
+    },
+    {
+      "ability_id": 261,
+      "offset": 10712301,
+      "name": "Solid Rock",
+      "raw_hex": "cde3e0ddd800cce3d7dfffffffffffffff"
+    },
+    {
+      "ability_id": 262,
+      "offset": 10712318,
+      "name": "Turboblaze",
+      "raw_hex": "cee9e6d6e3d6e0d5eed9ffffffffffffff"
+    },
+    {
+      "ability_id": 263,
+      "offset": 10712335,
+      "name": "Teravolt",
+      "raw_hex": "ced9e6d5eae3e0e8ffffffffffffffffff"
+    },
+    {
+      "ability_id": 264,
+      "offset": 10712352,
+      "name": "Chilling Neigh",
+      "raw_hex": "bddcdde0e0dde2db00c8d9dddbdcffffff"
+    },
+    {
+      "ability_id": 265,
+      "offset": 10712369,
+      "name": "Libero",
+      "raw_hex": "c6ddd6d9e6e3ffffffffffffffffffffff"
+    },
+    {
+      "ability_id": 266,
+      "offset": 10712386,
+      "name": "Tangling Hair",
+      "raw_hex": "ced5e2dbe0dde2db00c2d5dde6ffffffff"
+    },
+    {
+      "ability_id": 267,
+      "offset": 10712403,
+      "name": "Wimp Out",
+      "raw_hex": "d1dde1e400c9e9e8ffffffffffffffffff"
+    },
+    {
+      "ability_id": 268,
+      "offset": 10712420,
+      "name": "Queenly Majesty",
+      "raw_hex": "cbe9d9d9e2e0ed00c7d5ded9e7e8edffff"
+    },
+    {
+      "ability_id": 269,
+      "offset": 10712437,
+      "name": "Alchemic Power",
+      "raw_hex": "bbe0d7dcd9e1ddd700cae3ebd9e6ffffff"
+    },
+    {
+      "ability_id": 270,
+      "offset": 10712454,
+      "name": "Propeller Tail",
+      "raw_hex": "cae6e3e4d9e0e0d9e600ced5dde0ffffff"
+    },
+    {
+      "ability_id": 271,
+      "offset": 10712471,
+      "name": "Nine Lives",
+      "raw_hex": "c8dde2d900c6ddead9e7ffffffffffffff"
+    },
+    {
+      "ability_id": 272,
+      "offset": 10712488,
+      "name": "Focus Belt",
+      "raw_hex": "c0e3d7e9e700bcd9e0e8ffffffffffffff"
+    },
+    {
+      "ability_id": 273,
+      "offset": 10712505,
+      "name": "Evaporate",
+      "raw_hex": "bfead5e4e3e6d5e8d9ffffffffffffffff"
+    },
+    {
+      "ability_id": 274,
+      "offset": 10712522,
+      "name": "Fiery Neigh",
+      "raw_hex": "c0ddd9e6ed00c8d9dddbdcffffffffffff"
+    },
+    {
+      "ability_id": 275,
+      "offset": 10712539,
+      "name": "Shocking Neigh",
+      "raw_hex": "cddce3d7dfdde2db00c8d9dddbdcffffff"
+    },
+    {
+      "ability_id": 276,
+      "offset": 10712556,
+      "name": "Pride",
+      "raw_hex": "cae6ddd8d9ffffffffffffffffffffffff"
+    },
+    {
+      "ability_id": 277,
+      "offset": 10712573,
+      "name": "Multieye",
+      "raw_hex": "c7e9e0e8ddd9edd9ffffffffffffffffff"
+    },
+    {
+      "ability_id": 278,
+      "offset": 10712590,
+      "name": "Subterfuge",
+      "raw_hex": "cde9d6e8d9e6dae9dbd9ffffffffffffff"
+    },
+    {
+      "ability_id": 279,
+      "offset": 10712607,
+      "name": "Honey Armor",
+      "raw_hex": "c2e3e2d9ed00bbe6e1e3e6ffffffffffff"
+    },
+    {
+      "ability_id": 280,
+      "offset": 10712624,
+      "name": "Tangling Wool",
+      "raw_hex": "ced5e2dbe0dde2db00d1e3e3e0ffffffff"
+    },
+    {
+      "ability_id": 281,
+      "offset": 10712641,
+      "name": "Brain Bond",
+      "raw_hex": "bce6d5dde200bce3e2d8ffffffffffffff"
+    },
+    {
+      "ability_id": 282,
+      "offset": 10712658,
+      "name": "Grass Dash",
+      "raw_hex": "c1e6d5e7e700bed5e7dcffffffffffffff"
+    },
+    {
+      "ability_id": 283,
+      "offset": 10712675,
+      "name": "Slippery Tail",
+      "raw_hex": "cde0dde4e4d9e6ed00ced5dde0ffffffff"
+    },
+    {
+      "ability_id": 284,
+      "offset": 10712692,
+      "name": "Drill Beak",
+      "raw_hex": "bee6dde0e000bcd9d5dfffffffffffffff"
+    },
+    {
+      "ability_id": 285,
+      "offset": 10712709,
+      "name": "Cotton Cloud",
+      "raw_hex": "bde3e8e8e3e200bde0e3e9d8ffffffffff"
+    },
+    {
+      "ability_id": 286,
+      "offset": 10712726,
+      "name": "Bellow",
+      "raw_hex": "bcd9e0e0e3ebffffffffffffffffffffff"
+    },
+    {
+      "ability_id": 287,
+      "offset": 10712743,
+      "name": "Sound Waves",
+      "raw_hex": "cde3e9e2d800d1d5ead9e7ffffffffffff"
+    },
+    {
+      "ability_id": 288,
+      "offset": 10712760,
+      "name": "Icy Skin",
+      "raw_hex": "c3d7ed00cddfdde2ffffffffffffffffff"
+    },
+    {
+      "ability_id": 289,
+      "offset": 10712777,
+      "name": "Dusty Scales",
+      "raw_hex": "bee9e7e8ed00cdd7d5e0d9e7ffffffffff"
+    },
+    {
+      "ability_id": 290,
+      "offset": 10712794,
+      "name": "Crabby Tactics",
+      "raw_hex": "bde6d5d6d6ed00ced5d7e8ddd7e7ffffff"
+    },
+    {
+      "ability_id": 291,
+      "offset": 10712811,
+      "name": "Face Shield",
+      "raw_hex": "c0d5d7d900cddcddd9e0d8ffffffffffff"
+    },
+    {
+      "ability_id": 292,
+      "offset": 10712828,
+      "name": "Royal Roar",
+      "raw_hex": "cce3edd5e000cce3d5e6ffffffffffffff"
     }
   ]
 }

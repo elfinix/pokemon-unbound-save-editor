@@ -252,3 +252,41 @@
 252:Mimicry
 253:Screen Cleaner
 254:Pastel Veil
+255:-
+256:Air Lock
+257:Vital Spirit
+258:White Smoke
+259:Pure Power
+260:Iron Barbs
+261:Solid Rock
+262:Turboblaze
+263:Teravolt
+264:Chilling Neigh
+265:Libero
+266:Tangling Hair
+267:Wimp Out
+268:Queenly Majesty
+269:Alchemic Power
+270:Propeller Tail
+271:Nine Lives
+272:Focus Belt
+273:Evaporate
+274:Fiery Neigh
+275:Shocking Neigh
+276:Pride
+277:Multieye
+278:Subterfuge
+279:Honey Armor
+280:Tangling Wool
+281:Brain Bond
+282:Grass Dash
+283:Slippery Tail
+284:Drill Beak
+285:Cotton Cloud
+286:Bellow
+287:Sound Waves
+288:Icy Skin
+289:Dusty Scales
+290:Crabby Tactics
+291:Face Shield
+292:Royal Roar

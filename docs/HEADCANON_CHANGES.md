@@ -6,11 +6,12 @@ This document tracks all custom balance tweaks, ROM modifications, ability reass
 
 ## 1. Quick Change Matrix
 
-| Species | ID | Category / Slot | Original Value | Headcanon Value | Status | Date |
+| Subject | ID | Category / Slot | Original Value | Headcanon Value | Status | Date |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Gible** | `#496` | Hidden Ability (`HA`) | Rough Skin (`24`) | **Magic Bounce** (`90`) | 🔄 Reverted (Tested) | 2026-10-03 |
 | **Gible** | `#496` | Base Stat / Speed | `42` | **`60`** | ✅ Active | 2026-10-04 |
 | **Snorunt** | `#346` | Typing (Dual Type) | Ice (`15`) / Ice (`15`) | **Ice** (`15`) / **Ghost** (`7`) | ✅ Active | 2026-10-04 |
+| **Bone Rush** | `#198` | Move Name & Accuracy | Bone Rush (90% Acc) | **Bone Crush** (**100% Acc**, 25 BP) | ✅ Active | 2026-10-04 |
 
 ---
 
@@ -72,6 +73,36 @@ This document tracks all custom balance tweaks, ROM modifications, ability reass
   * [x] In-ROM bytes verified (`0x19E327A: 15`, `0x19E327B: 7`).
   * [x] PUSE Save Editor metadata synced (displays Ice/Ghost badges and updates party coverage calculations).
 
+### [004] Bone Rush (`#198`) &rarr; Bone Crush (Name & Accuracy Buff)
+* **Category:** Move Properties
+* **Slot / Field:** Move Name (`gMoveNames`), Accuracy (`OFF_ACCURACY: 0x02`), Power (`OFF_POWER: 0x00`)
+* **Original:** Name: `Bone Rush` (ID: `198`), Power: `25`, Accuracy: `90%`, PP: `10`
+* **Headcanon:** Name: **`Bone Crush`**, Power: **`25`**, Accuracy: **`100%`**, PP: `10`
+* **Technical Offsets & References:**
+  * **ROM Move Struct Offset:** `0xA772F8` (`0xA769BC + 197 * 0x0C`)
+  * **ROM Move Name Offset:** `0xA4141E` (`0xA40A1D + 197 * 13`)
+  * **Metadata Synced:**
+    * `backend/data/moves_meta.json`
+    * `frontend/src/core/movesMeta.json`
+    * `frontend/public/data/moves_meta.json`
+    * `switch-homebrew/romfs/data/moves_meta.json`
+    * `3ds-homebrew/romfs/data/moves_meta.json`
+    * `backend/data/moves.txt`
+    * `frontend/public/data/moves.txt`
+    * `switch-homebrew/romfs/data/moves.txt`
+    * `3ds-homebrew/romfs/data/moves.txt`
+    * `backend/data/move_table_from_rom.json`
+    * `frontend/public/data/move_table_from_rom.json`
+    * `switch-homebrew/romfs/data/move_table_from_rom.json`
+    * `3ds-homebrew/romfs/data/move_table_from_rom.json`
+* **Rationale & Headcanon:**
+  * Enhances Ground-type multi-strike consistency by eliminating the frustrating 10% miss chance, making it a reliable multi-hit shield-breaker and focus-sash counter with a more visceral, impactful name (*Bone Crush*).
+* **Verification Checklist:**
+  * [x] ROM patched with automated FIFO backup created.
+  * [x] In-ROM name verified (`0xA4141E` &rarr; `Bone Crush\xFF`).
+  * [x] In-ROM accuracy verified (`0xA772FA` &rarr; `100%` / `0x64`).
+  * [x] PUSE Moves Wiki and move selectors updated to display `Bone Crush` with 100% accuracy.
+
 ---
 
 ## 3. Technical Specifications & Delimitations Reference
@@ -84,8 +115,8 @@ Quick reference for text length limits, ROM struct sizes, and memory table base 
 | :--- | :---: | :---: | :--- |
 | **Move Name** | **12 chars** | 12 chars | Fixed 13-byte array (`0xFF` terminator). Fits 4-slot battle menu without clipping. |
 | **Ability Name** | **16 chars** | 16 chars | Fixed 17-byte array in CFRU (`0xFF` terminator). Fits summary box & battle pop-up banner. |
-| **Move Description** | Dynamic (Pointer) | **~50–65 chars** | 2 lines max (~25–28 chars/line) separated by `\n` (`0xFE`). Fits battle summary window. |
-| **Ability Description** | Dynamic (Pointer) | **~50–60 chars** | 2 lines max (~25–28 chars/line) separated by `\n` (`0xFE`). Fits summary screen box. |
+| **Move Description** | Dynamic (Pointer) | **~50–65 chars** | 2 lines max separated by `\n` (`0xFE`). Fits battle summary window. |
+| **Ability Description** | Dynamic (Pointer) | **~35–45 chars** | Single continuous line without `\n` (`0xFE`). Fits summary screen box without clipping. |
 | **Pokémon Nickname** | **10 chars** | 10 chars | 10 GBA characters + `0xFF` terminator in 80-byte save substruct. |
 | **OT / Trainer Name** | **7 chars** | 7 chars | 7 GBA characters + `0xFF` terminator in save file Trainer header. |
 
@@ -121,7 +152,12 @@ Quick reference for text length limits, ROM struct sizes, and memory table base 
 
 #### 3. String Name Tables
 * **Move Names (`gMoveNames`):** Base `0xA40A1D` (13 bytes / entry)
-* **Ability Names (`gAbilityNames`):** Base `0xA363A9` (17 bytes / entry)
+* **Ability Names (`gAbilityNames`):** Base `0xA363A9` (17 bytes / entry, 292 contiguous entries in Unbound CFRU)
+  * `1–254`: Gen 1–8 standard abilities
+  * `255`: `-` (Placeholder)
+  * `256–270`: Additional Gen 8 & CFRU abilities
+  * `271–292`: Unbound custom abilities (e.g. *Nine Lives*, *Royal Roar*, *Dusty Scales*)
+  * `293+`: Expandable up to 65,535 abilities by repointing `gAbilityNames` into ROM freespace (`0x08E00000+`).
 
 ---
 

@@ -23,6 +23,8 @@ from pathlib import Path
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DATA_DIR = WORKSPACE_ROOT / "backend" / "data"
 FRONTEND_CORE_DIR = WORKSPACE_ROOT / "frontend" / "src" / "core"
+SWITCH_DATA_DIR = WORKSPACE_ROOT / "switch-homebrew" / "romfs" / "data"
+THREE_DS_DATA_DIR = WORKSPACE_ROOT / "3ds-homebrew" / "romfs" / "data"
 
 def resolve_default_rom_dir() -> Path:
     """Auto-detect ROM folder in workspace or emulator paths."""
@@ -256,6 +258,8 @@ def sync_puse_metadata(species_id: int, slot: str, ability_id: int) -> None:
     targets = [
         BACKEND_DATA_DIR / "species_abilities_meta.json",
         FRONTEND_CORE_DIR / "speciesAbilitiesMeta.json",
+        SWITCH_DATA_DIR / "species_abilities_meta.json",
+        THREE_DS_DATA_DIR / "species_abilities_meta.json",
     ]
     
     key = str(species_id)
@@ -270,7 +274,7 @@ def sync_puse_metadata(species_id: int, slot: str, ability_id: int) -> None:
                 data[key] = {"ability_1_id": 0, "ability_2_id": 0, "hidden_ability_id": 0}
             data[key][slot_key] = ability_id
             path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-            print(f"\033[34m[PUSE METADATA]\033[0m Synchronized: {path.name}")
+            print(f"\033[34m[PUSE METADATA]\033[0m Synchronized: {path.name} ({path.parent.parent.name if path.parent.name == 'data' else path.parent.name})")
         except Exception as e:
             print(f"\033[31m[WARN]\033[0m Failed updating {path}: {e}")
 
