@@ -803,6 +803,34 @@ class PartyLevelUpdate(BaseModel):
     target_level: int
     growth_rate: int | None = None
 
+
+class PartyFullUpdate(BaseModel):
+    slot: int | None = None
+    index: int | None = None
+    nickname: str | None = None
+    moves: List[int] | None = None
+    move_pp: List[int] | None = None
+    pps: List[int] | None = None
+    move_pp_ups: List[int] | None = None
+    pp_ups: List[int] | None = None
+    item_id: int | None = None
+    held_item_id: int | None = None
+    ball_id: int | None = None
+    happiness: int | None = None
+    species_id: int | None = None
+    ivs: dict | None = None
+    evs: dict | None = None
+    nature_id: int | None = None
+    nature: str | None = None
+    exp: int | None = None
+    shiny: bool | None = None
+    is_shiny: bool | None = None
+    gender: str | None = None
+    current_ability_index: int | None = None
+    ability_slot: int | None = None
+    level: int | None = None
+    level_edit: dict | None = None
+
 # --- Helper logic ---
 def get_active_trainer_offset():
     """Find offset of active Trainer section (highest saveidx)."""
@@ -1178,6 +1206,143 @@ async def update_party_level(idx: int, data: PartyLevelUpdate):
         "growth_name": party_mod.GROWTH_NAMES.get(growth_rate, "Unknown"),
         "confidence": confidence,
     }
+
+
+@app.post("/party/{idx}/edit-full")
+async def edit_party_mon_full(idx: int, upd: PartyFullUpdate):
+    off = get_active_trainer_offset()
+    if off is None:
+        raise HTTPException(status_code=404, detail="Trainer section not found")
+    team_count = min(6, party_mod.ru32(current_save["data"], off + 0x34))
+    if idx < 0 or idx >= team_count:
+        raise HTTPException(status_code=404, detail="Pokemon not found in party")
+
+    mon_off = off + 0x38 + (idx * 100)
+    pk = party_mod.Pokemon(current_save["data"][mon_off: mon_off + 100])
+    species_before = pk.get_species_id()
+
+    if upd.species_id is not None:
+        if upd.species_id <= 0 or upd.species_id not in party_mod.DB_SPECIES:
+            raise HTTPException(status_code=400, detail="Invalid species_id")
+        pk.set_species_id(upd.species_id)
+
+    if upd.nickname is not None:
+        try:
+            pk.set_nickname(upd.nickname)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    moves = upd.moves
+    move_pp = upd.move_pp if upd.move_pp is not None else upd.pps
+    move_pp_ups = upd.move_pp_ups if upd.move_pp_ups is not None else upd.pp_ups
+    if moves is not None:
+        for mv in moves:
+            if int(mv) < 0 or int(mv) > 1023:
+                raise HTTPException(status_code=400, detail="Invalid move_id")
+        pk.set_moves(moves, move_pp=move_pp, move_pp_ups=move_pp_ups)
+    elif move_pp_ups is not None or move_pp is not None:
+        pk.set_moves(pk.get_moves_ids(), move_pp=move_pp, move_pp_ups=move_pp_ups)
+
+    item_id = upd.item_id if upd.item_id is not None else upd.held_item_id
+    if item_id is not None:
+        pk.set_item(item_id)
+
+    if upd.ball_id is not None:
+        try:
+            pk.set_ball_id(_assert_valid_ball_id(upd.ball_id))
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    if upd.happiness is not None:
+        try:
+            pk.set_happiness(upd.happiness)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    if upd.ivs:
+        spe_iv = upd.ivs.get('Spe', upd.ivs.get('spe', upd.ivs.get('Spd', upd.ivs.get('spd', 0))))
+        spd_iv = upd.ivs.get('SpD', upd.ivs.get('spd', 0)) if 'Spe' in upd.ivs or 'spe' in upd.ivs else upd.ivs.get('SpD', 0)
+        new_ivs = {
+            'HP': upd.ivs.get('HP', upd.ivs.get('hp', 0)),
+            'Atk': upd.ivs.get('Atk', upd.ivs.get('atk', 0)),
+            'Def': upd.ivs.get('Def', upd.ivs.get('def', upd.ivs.get('dfe', 0))),
+            'Spd': spe_iv,
+            'SpA': upd.ivs.get('SpA', upd.ivs.get('spa', 0)),
+            'SpD': spd_iv if spd_iv != 0 else upd.ivs.get('SpD', upd.ivs.get('spd', 0)),
+        }
+        pk.set_ivs(new_ivs)
+
+    if upd.evs:
+        spe_ev = upd.evs.get('Spe', upd.evs.get('spe', upd.evs.get('Spd', upd.evs.get('spd', 0))))
+        spd_ev = upd.evs.get('SpD', upd.evs.get('spd', 0)) if 'Spe' in upd.evs or 'spe' in upd.evs else upd.evs.get('SpD', 0)
+        new_evs = {
+            'HP': upd.evs.get('HP', upd.evs.get('hp', 0)),
+            'Atk': upd.evs.get('Atk', upd.evs.get('atk', 0)),
+            'Def': upd.evs.get('Def', upd.evs.get('def', upd.evs.get('dfe', 0))),
+            'Spd': spe_ev,
+            'SpA': upd.evs.get('SpA', upd.evs.get('spa', 0)),
+            'SpD': spd_ev if spd_ev != 0 else upd.evs.get('SpD', upd.evs.get('spd', 0)),
+        }
+        pk.set_evs(new_evs)
+
+    if upd.current_ability_index is not None:
+        pk.set_ability_slot(upd.current_ability_index)
+
+    if upd.nature_id is not None:
+        pk.set_nature(upd.nature_id)
+
+    shiny_flag = upd.shiny if upd.shiny is not None else upd.is_shiny
+    if shiny_flag is not None or upd.gender is not None:
+        try:
+            pk.set_identity(shiny=shiny_flag, gender=upd.gender)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    if upd.level_edit is not None:
+        target_level = max(1, min(100, int(upd.level_edit.get("target_level", 1))))
+        growth_rate_arg = upd.level_edit.get("growth_rate")
+        if growth_rate_arg is not None:
+            growth_rate = max(0, min(5, int(growth_rate_arg)))
+        else:
+            species_growth = party_mod.get_species_growth_rate(pk.get_species_id())
+            if species_growth is not None:
+                growth_rate = species_growth
+            else:
+                growth_rate, _ = party_mod.guess_growth_rate(pk.get_exp(), current_save["data"][mon_off + 0x54])
+        new_exp = party_mod.get_exp_at_level(growth_rate, target_level)
+        pk.set_exp(new_exp)
+        pk.set_visual_level(target_level)
+    elif upd.level is not None:
+        target_level = max(1, min(100, int(upd.level)))
+        visual_level = current_save["data"][mon_off + 0x54]
+        if target_level != visual_level:
+            species_growth = party_mod.get_species_growth_rate(pk.get_species_id())
+            if species_growth is not None:
+                growth_rate = species_growth
+            else:
+                growth_rate, _ = party_mod.guess_growth_rate(pk.get_exp(), visual_level)
+            new_exp = party_mod.get_exp_at_level(growth_rate, target_level)
+            pk.set_exp(new_exp)
+            pk.set_visual_level(target_level)
+
+    pk.recalculate_party_stats(clamp_hp=True)
+
+    if upd.species_id is None and pk.get_species_id() != species_before:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Safety check failed during party full edit: species changed unexpectedly from {species_before} to {pk.get_species_id()}.",
+        )
+
+    current_save["data"][mon_off: mon_off + 100] = pk.pack_data()
+    return {"status": "Party Pokemon updated"}
+
+
+@app.post("/party/edit-full")
+async def edit_party_mon_full_alt(upd: PartyFullUpdate):
+    slot = upd.slot if upd.slot is not None else upd.index
+    if slot is None:
+        raise HTTPException(status_code=400, detail="Missing slot or index in payload")
+    return await edit_party_mon_full(int(slot), upd)
 
 # Load item database at startup
 bag_mod.load_item_names_from_file()

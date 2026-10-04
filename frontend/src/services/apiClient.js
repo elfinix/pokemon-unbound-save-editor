@@ -306,6 +306,17 @@ const backendClient = {
             body: JSON.stringify(payload),
         });
     },
+    async editParty(payload) {
+        const slot = Number(payload.slot ?? payload.index ?? 0);
+        return backendJson(`/party/${slot}/edit-full`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+    },
+    async editPartyFull(payload) {
+        return backendClient.editParty(payload);
+    },
     loadPc() {
         return backendJson("/pc/load");
     },
@@ -641,6 +652,21 @@ const localClient = {
         const speciesId = await ensureValidSpeciesId(payload?.species_id);
         updateBuffer((next) => patchPartySpecies(next, Number(index), { species_id: speciesId }));
         return { status: 'Species updated in memory' };
+    },
+    async editParty(payload) {
+        const { updateBuffer, editPartyMonFull, getSpeciesMap } = await getLocalCoreModules();
+        const nextPayload = { ...(payload || {}) };
+        if (nextPayload.species_id !== undefined && nextPayload.species_id !== null) {
+            nextPayload.species_id = await ensureValidSpeciesId(nextPayload.species_id);
+        }
+        const speciesMap = await getSpeciesMap();
+        updateBuffer((next) => {
+            editPartyMonFull(next, nextPayload, speciesMap);
+        });
+        return { status: 'Party edit saved to memory' };
+    },
+    async editPartyFull(payload) {
+        return localClient.editParty(payload);
     },
     async loadPc() {
         const { getBuffer, loadPcContext, setPcContext } = await getLocalCoreModules();

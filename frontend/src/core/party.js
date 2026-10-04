@@ -451,12 +451,18 @@ function setIvs(rawMon, ivs) {
     const sub = substructViews(rawMon);
     const orig = ru32(sub.C, 4);
     let next = orig & 0xC0000000;
-    next |= (ivs.HP & 0x1F) << 0;
-    next |= (ivs.Atk & 0x1F) << 5;
-    next |= (ivs.Def & 0x1F) << 10;
-    next |= (ivs.Spd & 0x1F) << 15;
-    next |= (ivs.SpA & 0x1F) << 20;
-    next |= (ivs.SpD & 0x1F) << 25;
+    const hp = Number(ivs?.HP ?? ivs?.hp ?? 0) & 0x1F;
+    const atk = Number(ivs?.Atk ?? ivs?.atk ?? 0) & 0x1F;
+    const def = Number(ivs?.Def ?? ivs?.def ?? ivs?.dfe ?? 0) & 0x1F;
+    const spe = Number(ivs?.Spe ?? ivs?.spe ?? ivs?.Spd ?? 0) & 0x1F;
+    const spa = Number(ivs?.SpA ?? ivs?.spa ?? 0) & 0x1F;
+    const spd = Number(ivs?.SpD ?? ivs?.spd ?? 0) & 0x1F;
+    next |= (hp & 0x1F) << 0;
+    next |= (atk & 0x1F) << 5;
+    next |= (def & 0x1F) << 10;
+    next |= (spe & 0x1F) << 15;
+    next |= (spa & 0x1F) << 20;
+    next |= (spd & 0x1F) << 25;
     wu32(sub.C, 4, next >>> 0);
     writeSubstructs(rawMon, sub);
 }
@@ -475,12 +481,18 @@ function getEvs(rawMon) {
 
 function setEvs(rawMon, evs) {
     const sub = substructViews(rawMon);
-    wu8(sub.D, 0, evs.HP);
-    wu8(sub.D, 1, evs.Atk);
-    wu8(sub.D, 2, evs.Def);
-    wu8(sub.D, 3, evs.Spd);
-    wu8(sub.D, 4, evs.SpA);
-    wu8(sub.D, 5, evs.SpD);
+    const hp = Math.max(0, Math.min(255, Number(evs?.HP ?? evs?.hp ?? 0)));
+    const atk = Math.max(0, Math.min(255, Number(evs?.Atk ?? evs?.atk ?? 0)));
+    const def = Math.max(0, Math.min(255, Number(evs?.Def ?? evs?.def ?? evs?.dfe ?? 0)));
+    const spe = Math.max(0, Math.min(255, Number(evs?.Spe ?? evs?.spe ?? evs?.Spd ?? 0)));
+    const spa = Math.max(0, Math.min(255, Number(evs?.SpA ?? evs?.spa ?? 0)));
+    const spd = Math.max(0, Math.min(255, Number(evs?.SpD ?? evs?.spd ?? 0)));
+    wu8(sub.D, 0, hp);
+    wu8(sub.D, 1, atk);
+    wu8(sub.D, 2, def);
+    wu8(sub.D, 3, spe);
+    wu8(sub.D, 4, spa);
+    wu8(sub.D, 5, spd);
     writeSubstructs(rawMon, sub);
 }
 
@@ -1068,4 +1080,131 @@ export function updatePartyLevel(buffer, monIndex, payload) {
         wu8(rawMon, OFF_LEVEL_VISUAL, targetLevel);
         recalculatePartyStats(rawMon, true);
     });
+}
+
+export function editPartyMonFull(buffer, payload, speciesMap = null) {
+    const monIndex = Number(payload.slot ?? payload.index);
+    if (!Number.isInteger(monIndex) || monIndex < 0 || monIndex > 5) {
+        throw new Error('Invalid party index');
+    }
+
+    const active = findActiveTrainerSection(buffer);
+    if (!active) {
+        throw new Error('Trainer section not found');
+    }
+
+    const teamCount = Math.min(6, ru32(buffer, active.off + PARTY_COUNT_OFFSET));
+    if (monIndex >= teamCount) {
+        throw new Error('Pokemon not found in party');
+    }
+
+    const monOffset = partyMonOffset(active.off, monIndex);
+    const rawMon = buffer.slice(monOffset, monOffset + PARTY_MON_SIZE);
+    const speciesBefore = getSpeciesId(rawMon);
+
+    if (payload.species_id !== undefined && payload.species_id !== null) {
+        setSpeciesId(rawMon, Number(payload.species_id));
+    }
+
+    if (payload.nickname !== undefined && payload.nickname !== null) {
+        const requested = String(payload.nickname).trim();
+        const speciesId = payload.species_id ?? speciesBefore;
+        const speciesName = requested ? requested : speciesMap?.get(Number(speciesId));
+        if (!speciesName) {
+            throw new Error('Unknown species for default nickname');
+        }
+        rawMon.set(encodeText(speciesName, 10), OFF_NICK);
+    }
+
+    const moveList = payload.moves ?? null;
+    const movePp = payload.move_pp ?? payload.pps ?? null;
+    const movePpUps = payload.move_pp_ups ?? payload.pp_ups ?? null;
+    if (moveList) {
+        setMoves(rawMon, moveList, movePp, movePpUps);
+    } else if (Array.isArray(movePpUps)) {
+        setMoves(rawMon, getMoves(rawMon), movePp, movePpUps);
+    } else if (Array.isArray(movePp)) {
+        setMoves(rawMon, getMoves(rawMon), movePp, getMovePpUps(rawMon));
+    }
+
+    const itemId = payload.item_id !== undefined && payload.item_id !== null
+        ? payload.item_id
+        : payload.held_item_id;
+    if (itemId !== undefined && itemId !== null) {
+        setItemId(rawMon, Number(itemId));
+    }
+
+    if (payload.ball_id !== undefined && payload.ball_id !== null) {
+        setBallId(rawMon, payload.ball_id);
+    }
+
+    if (payload.happiness !== undefined && payload.happiness !== null) {
+        setHappiness(rawMon, payload.happiness);
+    }
+
+    if (payload.ivs) {
+        setIvs(rawMon, payload.ivs);
+    }
+
+    if (payload.evs) {
+        setEvs(rawMon, payload.evs);
+    }
+
+    if (payload.current_ability_index !== undefined && payload.current_ability_index !== null) {
+        setAbilitySlot(rawMon, Number(payload.current_ability_index));
+    }
+
+    if (payload.nature_id !== undefined && payload.nature_id !== null) {
+        setNature(rawMon, Number(payload.nature_id));
+    }
+
+    const shinyVal = payload.shiny !== undefined ? payload.shiny : payload.is_shiny;
+    if (shinyVal !== undefined || payload.gender !== undefined) {
+        const nextPid = findIdentityPid(rawMon, {
+            shiny: shinyVal,
+            gender: payload.gender,
+        });
+        wu32(rawMon, OFF_PID, nextPid >>> 0);
+    }
+
+    if (payload.level_edit) {
+        const targetLevel = Math.max(1, Math.min(100, Number(payload.level_edit.target_level || 1)));
+        const currentExp = getExp(rawMon);
+        const visualLevel = ru8(rawMon, OFF_LEVEL_VISUAL);
+
+        let growthRate;
+        if (payload.level_edit.growth_rate === undefined || payload.level_edit.growth_rate === null || payload.level_edit.growth_rate === '') {
+            const speciesGrowth = getSpeciesGrowthRate(rawMon);
+            if (speciesGrowth !== null) {
+                growthRate = speciesGrowth;
+            } else {
+                growthRate = guessGrowthRate(currentExp, visualLevel);
+            }
+        } else {
+            growthRate = Math.max(0, Math.min(5, Number(payload.level_edit.growth_rate)));
+        }
+
+        const targetExp = getExpAtLevel(growthRate, targetLevel);
+        setExp(rawMon, targetExp);
+        wu8(rawMon, OFF_LEVEL_VISUAL, targetLevel);
+    } else if (payload.level !== undefined && payload.level !== null) {
+        const targetLevel = Math.max(1, Math.min(100, Number(payload.level)));
+        const visualLevel = ru8(rawMon, OFF_LEVEL_VISUAL);
+        if (targetLevel !== visualLevel) {
+            const currentExp = getExp(rawMon);
+            const speciesGrowth = getSpeciesGrowthRate(rawMon);
+            const growthRate = speciesGrowth !== null ? speciesGrowth : guessGrowthRate(currentExp, visualLevel);
+            const targetExp = getExpAtLevel(growthRate, targetLevel);
+            setExp(rawMon, targetExp);
+            wu8(rawMon, OFF_LEVEL_VISUAL, targetLevel);
+        }
+    }
+
+    if ((payload.species_id === undefined || payload.species_id === null) && getSpeciesId(rawMon) !== speciesBefore) {
+        throw new Error(`Safety check failed: party species changed unexpectedly from ${speciesBefore} to ${getSpeciesId(rawMon)}`);
+    }
+
+    recalculatePartyStats(rawMon, true);
+    addMonChecksum(rawMon);
+    buffer.set(rawMon, monOffset);
 }

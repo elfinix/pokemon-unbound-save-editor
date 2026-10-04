@@ -186,20 +186,28 @@ export default function App() {
         try {
             const original = selectedPokemon || {};
             const payload = {
-                slot: updatedPk.slot,
+                slot: updatedPk.slot ?? updatedPk.index ?? original.slot ?? original.index ?? 0,
                 nickname: updatedPk.nickname ?? original.nickname ?? '',
                 species_id: updatedPk.species_id ?? original.species_id,
                 level: updatedPk.level ?? original.level ?? 1,
+                level_edit: updatedPk.level_edit,
                 nature: updatedPk.nature ?? original.nature,
-                held_item_id: updatedPk.held_item_id ?? original.held_item_id ?? 0,
+                nature_id: updatedPk.nature_id ?? original.nature_id,
+                held_item_id: updatedPk.held_item_id ?? updatedPk.item_id ?? original.held_item_id ?? original.item_id ?? 0,
+                item_id: updatedPk.item_id ?? updatedPk.held_item_id ?? original.item_id ?? original.held_item_id ?? 0,
+                ball_id: updatedPk.ball_id ?? original.ball_id,
+                happiness: updatedPk.happiness ?? original.happiness,
                 current_ability_index: updatedPk.current_ability_index ?? original.current_ability_index ?? 0,
                 ability_slot: updatedPk.ability_slot ?? original.ability_slot ?? 'Ability 1',
-                shiny: Boolean(updatedPk.is_shiny),
+                shiny: Boolean(updatedPk.is_shiny ?? updatedPk.shiny),
+                is_shiny: Boolean(updatedPk.is_shiny ?? updatedPk.shiny),
                 ivs: updatedPk.ivs ?? original.ivs,
                 evs: updatedPk.evs ?? original.evs,
                 moves: updatedPk.moves ?? original.moves,
-                pps: updatedPk.pps ?? original.pps,
-                pp_ups: updatedPk.pp_ups ?? original.pp_ups,
+                move_pp: updatedPk.move_pp ?? updatedPk.pps ?? original.move_pp ?? original.pps,
+                move_pp_ups: updatedPk.move_pp_ups ?? updatedPk.pp_ups ?? original.move_pp_ups ?? original.pp_ups,
+                pps: updatedPk.pps ?? updatedPk.move_pp ?? original.pps ?? original.move_pp,
+                pp_ups: updatedPk.pp_ups ?? updatedPk.move_pp_ups ?? original.pp_ups ?? original.move_pp_ups,
             };
 
             if (
@@ -214,8 +222,9 @@ export default function App() {
             setSelectedPokemon(null);
             setRefreshKey((prev) => prev + 1);
             showToast('Party Pokemon updated successfully!', 'success');
-        } catch {
-            showToast('Failed to save party Pokemon changes.', 'error');
+        } catch (err) {
+            console.error('Failed to save party Pokemon changes:', err);
+            showToast(err?.message ? `Failed to save party Pokemon: ${err.message}` : 'Failed to save party Pokemon changes.', 'error');
         }
     };
 
@@ -226,12 +235,18 @@ export default function App() {
                 box: updatedPk.box ?? original.box,
                 slot: updatedPk.slot ?? original.slot,
                 moves: updatedPk.moves ?? original.moves,
-                pps: updatedPk.pps ?? original.pps,
-                pp_ups: updatedPk.pp_ups ?? original.pp_ups,
+                move_pp: updatedPk.move_pp ?? updatedPk.pps ?? original.move_pp ?? original.pps,
+                move_pp_ups: updatedPk.move_pp_ups ?? updatedPk.pp_ups ?? original.move_pp_ups ?? original.pp_ups,
+                pps: updatedPk.pps ?? updatedPk.move_pp ?? original.pps ?? original.move_pp,
+                pp_ups: updatedPk.pp_ups ?? updatedPk.move_pp_ups ?? original.pp_ups ?? original.move_pp_ups,
                 ivs: updatedPk.ivs ?? original.ivs,
                 evs: updatedPk.evs ?? original.evs,
                 nature: updatedPk.nature ?? original.nature,
-                held_item_id: updatedPk.held_item_id ?? original.held_item_id,
+                nature_id: updatedPk.nature_id ?? original.nature_id,
+                held_item_id: updatedPk.held_item_id ?? updatedPk.item_id ?? original.held_item_id ?? original.item_id,
+                item_id: updatedPk.item_id ?? updatedPk.held_item_id ?? original.item_id ?? original.held_item_id,
+                ball_id: updatedPk.ball_id ?? original.ball_id,
+                happiness: updatedPk.happiness ?? original.happiness,
             };
 
             if (typeof updatedPk.nickname === 'string' && updatedPk.nickname !== original.nickname) {
@@ -246,8 +261,8 @@ export default function App() {
                 payload.species_id = updatedPk.species_id;
             }
 
-            if (Boolean(updatedPk.is_shiny) !== Boolean(original.is_shiny)) {
-                payload.shiny = Boolean(updatedPk.is_shiny);
+            if (Boolean(updatedPk.is_shiny ?? updatedPk.shiny) !== Boolean(original.is_shiny ?? original.shiny)) {
+                payload.shiny = Boolean(updatedPk.is_shiny ?? updatedPk.shiny);
             }
 
             if (
@@ -275,8 +290,9 @@ export default function App() {
             setSelectedPokemon(null);
             setRefreshKey((prev) => prev + 1);
             showToast('PC Box updated successfully!', 'success');
-        } catch {
-            showToast('Failed to save PC Box.', 'error');
+        } catch (err) {
+            console.error('Failed to save PC Pokemon changes:', err);
+            showToast(err?.message ? `Failed to save PC Box: ${err.message}` : 'Failed to save PC Box.', 'error');
         }
     };
 
