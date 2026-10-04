@@ -2225,3 +2225,19 @@ async def download_save():
         raise HTTPException(status_code=400, detail="File not generated yet")
 
     return FileResponse(SAVE_FILE_NAME, filename=current_save["filename"])
+
+
+@app.get("/download-backup")
+async def download_backup():
+    """Download the original untouched .sav file as a backup (.bak)."""
+    if current_save.get("original_data") is None:
+        raise HTTPException(status_code=400, detail="No original save data available")
+
+    base_name = current_save.get("filename") or "save.sav"
+    backup_filename = f"{base_name}.bak"
+    return Response(
+        content=current_save["original_data"],
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{backup_filename}"'},
+    )
+

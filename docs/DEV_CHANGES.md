@@ -139,6 +139,24 @@ This document serves as the central audit trail and development journal for all 
 
 ---
 
+### 🔹 Step 10: Moves Wiki QoL, Move Split Parity & Dual-File Safety Backup
+* **Working Tree:** Latest
+* **Changes:**
+  * **Moves Wiki QoL & Interactive Sorting:**
+    * Changed default view mode to **Table / List view** for high-density browsing.
+    * Added 3-state interactive column header sorting (`asc` $\to$ `desc` $\to$ `off` / ID order) across `#`, `Move Name`, `Type`, `Category`, `Power`, `Accuracy`, and `Base / Max PP` with visual indicator icons.
+  * **Global Move Split & Stat Parity:**
+    * Fixed legacy bug where undefined split moves defaulted to Physical. Cross-referenced all **766 standard battle moves** against the official Showdown database.
+    * Corrected status/special categories (e.g. *Instruct*, *Telekinesis*, *Trick Room*, *Psychic Terrain*, *Heal Block*, *Swords Dance*, *Whirlwind*) across `backend/data/moves_meta.json`, `frontend/src/core/movesMeta.json`, `frontend/public/data/moves_meta.json`, and `switch-homebrew/romfs/data/moves_meta.json`.
+  * **Dual-File Safety Backup Download System:**
+    * Enhanced `downloadSave()` in both standalone local engine ([`apiClient.js`](file:///d:/Elfinix/Shared/pokemon-unbound-save-editor/frontend/src/services/apiClient.js)) and FastAPI backend ([`main.py`](file:///d:/Elfinix/Shared/pokemon-unbound-save-editor/backend/main.py)).
+    * When saving, the application automatically downloads **two** files simultaneously:
+      1. `<name>.sav`: The modified save binary with recalculated section checksums.
+      2. `<name>.sav.bak`: The original, untouched save binary loaded into memory as a safety backup.
+    * Updated [`SaveReportModal.jsx`](file:///d:/Elfinix/Shared/pokemon-unbound-save-editor/frontend/src/components/SaveReportModal.jsx) and [`Sidebar.jsx`](file:///d:/Elfinix/Shared/pokemon-unbound-save-editor/frontend/src/components/Sidebar.jsx) to indicate dual-file export with `.bak` safety retention.
+
+---
+
 ## 3. Architecture & Directory Structure
 
 ```text

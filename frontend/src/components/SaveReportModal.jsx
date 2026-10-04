@@ -28,7 +28,9 @@ export default function SaveReportModal({
                 <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-4">
                     <div>
                         <h2 id="save-report-title" className="text-xl font-black text-white">Review Save Before Download</h2>
-                        <p className="mt-1 text-xs text-slate-400">This report inspects the proposed export without modifying your original file.</p>
+                        <p className="mt-1 text-xs text-slate-400">
+                            Inspects your proposed changes. Saving will download your modified <span className="text-blue-300 font-bold">.{saveExt}</span> and an untouched safety backup (<span className="text-amber-300 font-bold">.{saveExt}.bak</span>).
+                        </p>
                     </div>
                     <button
                         type="button"
@@ -139,7 +141,7 @@ export default function SaveReportModal({
                         disabled={!saveReport || saveReportLoading}
                         className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
                     >
-                        <Save size={14} /> Download {saveExt.toUpperCase()}
+                        <Save size={14} /> Download {saveExt.toUpperCase()} + Backup (.bak)
                     </button>
                 </div>
             </section>

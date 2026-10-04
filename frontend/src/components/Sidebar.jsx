@@ -231,7 +231,7 @@ export default function Sidebar({
                         type="button"
                         onClick={onDownload}
                         className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/25 cursor-pointer"
-                        title="Export and download modified save file"
+                        title="Export modified save and original backup (.bak)"
                     >
                         <Save size={14} /> Save
                     </button>

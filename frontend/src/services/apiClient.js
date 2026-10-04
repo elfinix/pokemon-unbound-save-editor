@@ -212,7 +212,34 @@ const backendClient = {
     },
     async downloadSave() {
         await backendJson('/save-all', { method: 'POST' });
-        window.location.href = `${API_BASE}/download`;
+        try {
+            const res = await fetch(`${API_BASE}/download`);
+            if (!res.ok) throw new Error('Download failed');
+            const blob = await res.blob();
+            const cdHeader = res.headers.get('Content-Disposition');
+            let filename = 'edited_save.sav';
+            if (cdHeader && cdHeader.includes('filename=')) {
+                const match = cdHeader.match(/filename="?([^";]+)"?/);
+                if (match) filename = match[1];
+            }
+            // 1. Download modified save
+            downloadBlob(blob, filename);
+
+            // 2. Download original backup
+            try {
+                const bakRes = await fetch(`${API_BASE}/download-backup`);
+                if (bakRes.ok) {
+                    const bakBlob = await bakRes.blob();
+                    setTimeout(() => {
+                        downloadBlob(bakBlob, `${filename}.bak`);
+                    }, 150);
+                }
+            } catch {
+                // If backup endpoint unavailable, modified save is still preserved
+            }
+        } catch {
+            window.location.href = `${API_BASE}/download`;
+        }
     },
     getSaveReport() {
         return backendJson('/save-report');
@@ -575,13 +602,28 @@ const localClient = {
     async downloadSave() {
         const {
             getBuffer,
+            getOriginalBuffer,
             getFilename,
             getPcContext,
             saveAll,
         } = await getLocalCoreModules();
+        const filename = getFilename();
+        const backupFilename = `${filename}.bak`;
+
+        // 1. Prepare finalized buffer with recalculated checksums and updated PC context
         const finalized = new Uint8Array(getBuffer());
         saveAll(finalized, getPcContext());
-        downloadBlob(new Blob([finalized], { type: 'application/octet-stream' }), getFilename());
+
+        // 2. Download the modified .sav file
+        downloadBlob(new Blob([finalized], { type: 'application/octet-stream' }), filename);
+
+        // 3. Download the original .sav.bak backup file
+        const original = getOriginalBuffer();
+        if (original) {
+            setTimeout(() => {
+                downloadBlob(new Blob([original], { type: 'application/octet-stream' }), backupFilename);
+            }, 150);
+        }
     },
     async getSaveReport() {
         const { getBuffer, getOriginalBuffer, getPcContext, saveAll, buildSaveReport } = await getLocalCoreModules();
