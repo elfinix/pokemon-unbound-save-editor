@@ -153,16 +153,12 @@ export default function CoverageView({ client }) {
 
     // High-level overview stats
     const statsSummary = useMemo(() => {
-        const highWeaknesses = defensiveMatrix
-            .filter((r) => r.weakCount >= 3)
-            .sort((a, b) => b.weakCount - a.weakCount);
-
         const unresistedTypes = defensiveMatrix.filter((r) => r.resistCount === 0);
         const uncoveredOffense = offensiveMatrix.filter((r) => r.coveredCount === 0);
 
         return {
-            highWeaknesses,
             unresistedTypes,
+            totalCoveredDefensive: defensiveMatrix.filter((r) => r.resistCount > 0).length,
             uncoveredOffense,
             totalCoveredOffense: offensiveMatrix.filter((r) => r.coveredCount > 0).length,
         };
@@ -302,21 +298,17 @@ export default function CoverageView({ client }) {
                 </div>
 
                 <div className={`rounded-xl border border-white/10 bg-slate-900/60 ${isCompact ? 'p-3' : 'p-4'}`}>
-                    <p className="text-[10px] uppercase font-black tracking-widest text-amber-300">Shared Weaknesses (3+)</p>
-                    {statsSummary.highWeaknesses.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                            {statsSummary.highWeaknesses.map((w) => (
-                                <span
-                                    key={w.moveType}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-bold"
-                                >
-                                    {w.moveType}: {w.weakCount}×
-                                </span>
-                            ))}
-                        </div>
+                    <p className="text-[10px] uppercase font-black tracking-widest text-blue-300">Defensive Breadth</p>
+                    <p className={`${isCompact ? 'text-lg' : 'text-xl'} font-black text-blue-400 mt-0.5`}>
+                        {statsSummary.totalCoveredDefensive} / 18 Types
+                    </p>
+                    {statsSummary.unresistedTypes.length > 0 ? (
+                        <p className="text-[10px] text-amber-300/90 mt-0.5 truncate" title={`Unresisted: ${statsSummary.unresistedTypes.map((r) => r.moveType).join(', ')}`}>
+                            Unresisted: {statsSummary.unresistedTypes.map((r) => r.moveType).join(', ')}
+                        </p>
                     ) : (
-                        <p className="text-xs font-semibold text-emerald-400 mt-1 flex items-center gap-1">
-                            <Check size={13} /> No major weakness stacking
+                        <p className="text-[10px] text-blue-300/80 mt-0.5">
+                            Full defensive resistance coverage!
                         </p>
                     )}
                 </div>
@@ -327,7 +319,7 @@ export default function CoverageView({ client }) {
                         {statsSummary.totalCoveredOffense} / 18 Types
                     </p>
                     {statsSummary.uncoveredOffense.length > 0 ? (
-                        <p className="text-[10px] text-amber-300/90 mt-0.5 truncate">
+                        <p className="text-[10px] text-amber-300/90 mt-0.5 truncate" title={`Uncovered: ${statsSummary.uncoveredOffense.map((o) => o.enemyType).join(', ')}`}>
                             Uncovered: {statsSummary.uncoveredOffense.map((o) => o.enemyType).join(', ')}
                         </p>
                     ) : (

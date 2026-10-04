@@ -71,7 +71,7 @@ const getTotalEvs = (evs = {}) =>
     Number(evs.SpD ?? 0) +
     getSpeedStatValue(evs);
 
-export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedMode = false, onClose, onSave }) => {
+export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedMode = false, onClose, onSave, showToast }) => {
     const isPcMon = Boolean(pokemon?.isPC);
     const SAFE_IMPORT_NOTE = 'Existing Pokemon import applies item, moves, IVs, EVs, nature, and ability (if valid). Species, level, and identity metadata are preserved.';
     const initialGrowthMode = 'auto';
@@ -110,6 +110,11 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedM
     const [isSaving, setIsSaving] = useState(false);
     const [saveStage, setSaveStage] = useState('Applying changes...');
     const [showImportHelp, setShowImportHelp] = useState(false);
+    const [itemDropdownOpen, setItemDropdownOpen] = useState(false);
+    const [ballDropdownOpen, setBallDropdownOpen] = useState(false);
+    const [ballSearch, setBallSearch] = useState('');
+    const itemDropdownRef = useRef(null);
+    const ballDropdownRef = useRef(null);
 
     const hasKnownItemName = (name) => {
         if (!name) return false;
@@ -313,6 +318,21 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedM
             document.body.style.overflow = previousOverflow;
         };
     }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (itemDropdownRef.current && !itemDropdownRef.current.contains(e.target)) {
+                setItemDropdownOpen(false);
+            }
+            if (ballDropdownRef.current && !ballDropdownRef.current.contains(e.target)) {
+                setBallDropdownOpen(false);
+            }
+        };
+        if (itemDropdownOpen || ballDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [itemDropdownOpen, ballDropdownOpen]);
 
     const applySpeciesSelection = (species) => {
         const previousSpecies = allSpecies.find(s => s.id === localPk.species_id);
@@ -627,6 +647,7 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedM
 
                 <div className="flex bg-[#1e293b]/50 p-2 gap-2 border-b border-white/5">
                     <EditorTab active={activeTab === 'stats'} label="Stats" onClick={() => setActiveTab('stats')} />
+                    <EditorTab active={activeTab === 'items'} label="Items" onClick={() => setActiveTab('items')} />
                     <EditorTab active={activeTab === 'moves'} label="Moves" onClick={() => setActiveTab('moves')} />
                     <EditorTab active={activeTab === 'info'} label="Info" onClick={() => setActiveTab('info')} />
                 </div>
@@ -986,6 +1007,279 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedM
                         </div>
                     )}
 
+                    {activeTab === 'items' && (
+                        <div className="space-y-4 animate-in slide-in-from-right-4 duration-200">
+                            {/* Row 1: Held Item Card */}
+                            <div className="bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-white/5 space-y-3">
+                                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Held Item
+                                    </label>
+                                    {localPk.item_id > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setLocalPk({ ...localPk, item_id: 0 });
+                                                setItemSearch('');
+                                            }}
+                                            className="text-[10px] font-bold text-rose-400 hover:text-rose-300 hover:underline transition-colors cursor-pointer"
+                                        >
+                                            Remove Item
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Search & Select Combobox */}
+                                <div ref={itemDropdownRef} className="relative">
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative flex-1">
+                                            <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
+                                            <input
+                                                type="text"
+                                                placeholder="Search item by name or ID (e.g. 'Choice', 'Leftovers')..."
+                                                value={itemSearch}
+                                                onFocus={() => setItemDropdownOpen(true)}
+                                                onChange={(e) => {
+                                                    setItemSearch(e.target.value);
+                                                    setItemDropdownOpen(true);
+                                                }}
+                                                className="w-full bg-slate-900 border border-white/10 rounded-xl py-2 pl-9 pr-3 text-xs outline-none focus:border-blue-500/50 text-slate-200"
+                                            />
+                                        </div>
+                                        {itemSearch && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setItemSearch('');
+                                                    setItemDropdownOpen(false);
+                                                }}
+                                                className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-bold transition-colors cursor-pointer"
+                                            >
+                                                Clear
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Dropdown Results List */}
+                                    {itemDropdownOpen && (
+                                        <div className="absolute top-full left-0 right-0 mt-1.5 z-50 max-h-48 overflow-y-auto bg-slate-900 border border-blue-500/30 rounded-xl shadow-2xl divide-y divide-white/5">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setLocalPk({ ...localPk, item_id: 0 });
+                                                    setItemSearch('');
+                                                    setItemDropdownOpen(false);
+                                                }}
+                                                className="w-full text-left px-3 py-2 text-xs text-slate-400 hover:bg-white/5 hover:text-white transition-colors flex items-center justify-between cursor-pointer"
+                                            >
+                                                <span>--- No Item (None) ---</span>
+                                                <span className="text-[9px] font-mono text-slate-500">ID 0</span>
+                                            </button>
+                                            {allItems
+                                                .filter(item => {
+                                                    const q = itemSearch.toLowerCase().trim();
+                                                    if (!q) return true;
+                                                    return item.name.toLowerCase().includes(q) || item.id.toString() === q;
+                                                })
+                                                .slice(0, 30)
+                                                .map(item => (
+                                                    <button
+                                                        key={item.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setLocalPk({ ...localPk, item_id: item.id });
+                                                            setItemSearch('');
+                                                            setItemDropdownOpen(false);
+                                                        }}
+                                                        className={`w-full text-left px-3 py-2 text-xs transition-colors flex justify-between items-center group cursor-pointer ${
+                                                            Number(localPk.item_id) === Number(item.id)
+                                                                ? 'bg-blue-600/30 text-white font-bold'
+                                                                : 'hover:bg-blue-600/20 text-slate-200'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-2.5 truncate">
+                                                            <img
+                                                                src={client.getItemIconUrl(item.id)}
+                                                                alt={item.name}
+                                                                className="w-4 h-4 object-contain shrink-0"
+                                                                onError={(e) => {
+                                                                    if (e.currentTarget.src !== ITEM_ICON_FALLBACK_URL) {
+                                                                        e.currentTarget.src = ITEM_ICON_FALLBACK_URL;
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <span className="truncate font-medium">{item.name}</span>
+                                                        </div>
+                                                        <span className="text-blue-400 font-mono text-[9px] bg-blue-500/10 px-1.5 py-0.5 rounded shrink-0">
+                                                            ID {item.id}
+                                                        </span>
+                                                    </button>
+                                                ))
+                                            }
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Current Item Display Pill */}
+                                <div className="flex items-center justify-between bg-slate-900/80 p-2.5 rounded-xl border border-emerald-500/20">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-400 shrink-0 border border-emerald-500/20">
+                                            {canShowItemIcon ? (
+                                                <img
+                                                    src={client.getItemIconUrl(localPk.item_id)}
+                                                    alt={currentItemName}
+                                                    className="w-5 h-5 object-contain"
+                                                    onError={(e) => {
+                                                        if (e.currentTarget.src !== ITEM_ICON_FALLBACK_URL) {
+                                                            e.currentTarget.src = ITEM_ICON_FALLBACK_URL;
+                                                        }
+                                                    }}
+                                                />
+                                            ) : localPk.item_id > 0 ? (
+                                                <span className="text-[9px] font-mono text-slate-400">#{localPk.item_id}</span>
+                                            ) : (
+                                                <span className="text-sm font-mono text-slate-600 select-none font-bold">—</span>
+                                            )}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[9px] text-slate-500 uppercase font-black leading-none">Current Held Item</p>
+                                            <p className="text-emerald-400 font-bold text-xs sm:text-sm truncate mt-0.5">
+                                                {currentItemName}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {localPk.item_id > 0 && (
+                                        <span className="text-[9px] font-mono text-emerald-400/80 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                                            ID {localPk.item_id}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Row 2: Caught Ball Card */}
+                            <div className="bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-white/5 space-y-3">
+                                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Caught Ball
+                                    </label>
+                                    <span className="text-[10px] text-slate-500 font-mono">
+                                        Ball ID: {localPk.ball_id}
+                                    </span>
+                                </div>
+
+                                {/* Custom Ball Dropdown with Sprites */}
+                                <div ref={ballDropdownRef} className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setBallDropdownOpen((prev) => !prev);
+                                            setBallSearch('');
+                                        }}
+                                        className="w-full flex items-center justify-between bg-slate-900 hover:bg-slate-800/80 border border-white/10 hover:border-sky-400/40 rounded-xl p-2.5 text-xs text-left transition-colors cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <div className="w-8 h-8 bg-sky-500/10 rounded-lg flex items-center justify-center text-sky-400 shrink-0 border border-sky-500/20">
+                                                {currentBallItemId ? (
+                                                    <img
+                                                        src={client.getItemIconUrl(currentBallItemId)}
+                                                        alt={currentBallName}
+                                                        className="w-5 h-5 object-contain"
+                                                        onError={(e) => {
+                                                            if (e.currentTarget.src !== ITEM_ICON_FALLBACK_URL) {
+                                                                e.currentTarget.src = ITEM_ICON_FALLBACK_URL;
+                                                            }
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <span className="text-[9px] font-mono text-slate-400">#{localPk.ball_id}</span>
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[9px] text-slate-500 uppercase font-black leading-none">Selected Ball</p>
+                                                <p className="text-sky-300 font-bold text-xs sm:text-sm truncate mt-0.5">{currentBallName}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-[9px] font-mono text-sky-400/80 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                                                {currentBall?.name || 'Custom'}
+                                            </span>
+                                            <ChevronDown size={15} className={`text-slate-400 transition-transform ${ballDropdownOpen ? 'rotate-180' : ''}`} />
+                                        </div>
+                                    </button>
+
+                                    {/* Dropdown Menu */}
+                                    {ballDropdownOpen && (
+                                        <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-slate-900 border border-sky-500/30 rounded-xl shadow-2xl overflow-hidden max-h-56 flex flex-col animate-in fade-in zoom-in-95 duration-150">
+                                            <div className="p-2 border-b border-white/10 bg-slate-950">
+                                                <div className="relative">
+                                                    <Search size={12} className="absolute left-2.5 top-2.5 text-slate-500" />
+                                                    <input
+                                                        type="text"
+                                                        autoFocus
+                                                        placeholder="Search ball (e.g. 'Dusk', 'Ultra', 'Moon')..."
+                                                        value={ballSearch}
+                                                        onChange={(e) => setBallSearch(e.target.value)}
+                                                        className="w-full bg-slate-900 border border-white/10 rounded-lg pl-7 pr-2 py-1 text-xs text-slate-200 outline-none focus:border-sky-500"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="overflow-y-auto flex-1 divide-y divide-white/5">
+                                                {allBalls
+                                                    .filter((ball) => {
+                                                        const q = ballSearch.toLowerCase().trim();
+                                                        if (!q) return true;
+                                                        return ball.name.toLowerCase().includes(q) || String(ball.ball_id) === q;
+                                                    })
+                                                    .map((ball) => {
+                                                        const isSelected = Number(localPk.ball_id) === Number(ball.ball_id);
+                                                        return (
+                                                            <button
+                                                                key={ball.ball_id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setLocalPk({
+                                                                        ...localPk,
+                                                                        ball_id: Number(ball.ball_id),
+                                                                        ball_item_id: Number(ball.item_id),
+                                                                        ball_name: ball.name,
+                                                                    });
+                                                                    setBallDropdownOpen(false);
+                                                                }}
+                                                                className={`w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                                                                    isSelected
+                                                                        ? 'bg-sky-600/30 text-sky-100 font-bold'
+                                                                        : 'hover:bg-sky-600/20 text-slate-200'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                                    <img
+                                                                        src={client.getItemIconUrl(ball.item_id)}
+                                                                        alt={ball.name}
+                                                                        className="w-5 h-5 object-contain shrink-0"
+                                                                        onError={(e) => {
+                                                                            if (e.currentTarget.src !== ITEM_ICON_FALLBACK_URL) {
+                                                                                e.currentTarget.src = ITEM_ICON_FALLBACK_URL;
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <span className="truncate">{ball.name}</span>
+                                                                </div>
+                                                                <span className="text-[9px] font-mono text-slate-400 shrink-0">
+                                                                    ID {ball.ball_id}
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })
+                                                }
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === 'moves' && (
                         <div className="space-y-4">
                             <section className="bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-white/5 space-y-4">
@@ -1032,9 +1326,8 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedM
                     )}
 
                     {activeTab === 'info' && (
-                        <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-
-                            <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/5 space-y-4">
+                        <div className="space-y-4 animate-in slide-in-from-right-4 duration-200">
+                            <div className="bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-white/5 space-y-3">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block text-center">
                                     Nickname
                                 </label>
@@ -1043,25 +1336,25 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedM
                                     maxLength={10}
                                     value={localPk.nickname || ''}
                                     onChange={(e) => setLocalPk({ ...localPk, nickname: e.target.value })}
-                                    className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-blue-500/50"
+                                    className="w-full bg-slate-900 border border-white/10 rounded-xl py-2.5 px-4 text-sm outline-none focus:border-blue-500/50"
                                     placeholder="Nickname (max 10 chars)"
                                 />
                                 <p className="text-[10px] text-slate-500 text-center">Clear this field to restore the species name (max 10 chars).</p>
                             </div>
 
-                            <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/5 space-y-4">
+                            <div className="bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-white/5 space-y-3">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block text-center">
                                     Species
                                 </label>
 
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-3 text-slate-500" size={16} />
+                                    <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
                                     <input
                                         type="text"
                                         placeholder="Search species (e.g. 'Garchomp' or ID...)"
                                         value={speciesSearch}
                                         onChange={(e) => setSpeciesSearch(e.target.value)}
-                                        className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm outline-none focus:border-blue-500/50"
+                                        className="w-full bg-slate-900 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-sm outline-none focus:border-blue-500/50"
                                     />
                                 </div>
 
@@ -1080,8 +1373,9 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedM
                                             .map(species => (
                                                 <button
                                                     key={species.id}
+                                                    type="button"
                                                     onClick={() => applySpeciesSelection(species)}
-                                                    className="w-full text-left px-4 py-3 text-sm hover:bg-blue-600 transition-colors flex justify-between items-center group"
+                                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-600 transition-colors flex justify-between items-center group cursor-pointer"
                                                 >
                                                     <span className="group-hover:text-white">{species.label || species.name}</span>
                                                     <span className="text-blue-400 font-mono text-[10px] bg-blue-500/10 px-2 py-0.5 rounded">ID {species.id}</span>
@@ -1090,18 +1384,18 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedM
                                         }
                                     </div>
                                 ) : (
-                                    <div className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-blue-500/20">
+                                    <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-xl border border-blue-500/20">
                                         <div className="flex flex-col">
                                             <span className="text-[10px] text-slate-500 uppercase font-black">Current Species</span>
                                             <span className="text-blue-400 font-bold text-sm">
                                                 {currentSpeciesName}
                                             </span>
                                         </div>
-                                        <div className="w-10 h-10 bg-slate-800/80 rounded-lg flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
+                                        <div className="w-9 h-9 bg-slate-800/80 rounded-lg flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
                                             <img
                                                 src={client.getPokemonIconUrl(localPk.species_id)}
                                                 alt={currentSpeciesName}
-                                                className="w-8 h-8 object-contain pixelated"
+                                                className="w-7 h-7 object-contain pixelated"
                                                 onError={(e) => {
                                                     if (e.currentTarget.src !== POKEMON_ICON_FALLBACK_URL) {
                                                         e.currentTarget.src = POKEMON_ICON_FALLBACK_URL;
@@ -1112,18 +1406,18 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedM
                                     </div>
                                 )}
 
-                                <label className="flex items-center gap-2 text-[11px] text-slate-400">
+                                <label className="flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer">
                                     <input
                                         type="checkbox"
                                         checked={renameOnSpeciesChange}
                                         onChange={(e) => setRenameOnSpeciesChange(e.target.checked)}
-                                        className="accent-blue-500"
+                                        className="accent-blue-500 cursor-pointer"
                                     />
                                     Rename nickname to selected species when changing species
                                 </label>
                             </div>
 
-                            <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/5 space-y-4">
+                            <div className="bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-white/5 space-y-3">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block text-center">
                                     Pokédex Flags
                                 </label>
@@ -1131,66 +1425,67 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedM
                                     client={client}
                                     speciesId={localPk.species_id}
                                     speciesLabel={currentSpeciesName}
+                                    showToast={showToast}
                                 />
                             </div>
 
-                            <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/5 space-y-4">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block text-center">
-                                        Identity (Shiny & Gender)
-                                    </label>
+                            <div className="bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-white/5 space-y-3">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block text-center">
+                                    Identity (Shiny & Gender)
+                                </label>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <div className="bg-slate-900/70 border border-white/10 rounded-xl p-3 space-y-2">
-                                            <p className="text-[10px] uppercase font-black text-slate-500">Shiny</p>
-                                            <button
-                                                type="button"
-                                                onClick={() => setLocalPk({ ...localPk, is_shiny: !localPk.is_shiny })}
-                                                className={`w-full py-2 rounded-lg text-xs font-bold transition-colors ${localPk.is_shiny ? 'bg-amber-500/80 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
-                                            >
-                                                {localPk.is_shiny ? 'Shiny Enabled' : 'Standard Palette'}
-                                            </button>
-                                        </div>
-
-                                        <div className="bg-slate-900/70 border border-white/10 rounded-xl p-3 space-y-2">
-                                            <p className="text-[10px] uppercase font-black text-slate-500">Gender</p>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setLocalPk({ ...localPk, gender: 'male' })}
-                                                    disabled={localPk.gender_mode !== 'dynamic'}
-                                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${localPk.gender === 'male' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'} disabled:opacity-50 disabled:cursor-not-allowed`}
-                                                >
-                                                    Male
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setLocalPk({ ...localPk, gender: 'female' })}
-                                                    disabled={localPk.gender_mode !== 'dynamic'}
-                                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${localPk.gender === 'female' ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'} disabled:opacity-50 disabled:cursor-not-allowed`}
-                                                >
-                                                    Female
-                                                </button>
-                                            </div>
-                                            {localPk.gender_mode !== 'dynamic' && (
-                                                <p className="text-[10px] text-slate-500">
-                                                    {localPk.gender_mode === 'genderless'
-                                                        ? 'This species is genderless.'
-                                                        : localPk.gender_mode === 'fixed_male'
-                                                            ? 'This species is male-only.'
-                                                            : localPk.gender_mode === 'fixed_female'
-                                                                ? 'This species is female-only.'
-                                                                : 'Gender metadata unavailable for this species.'}
-                                                </p>
-                                            )}
-                                        </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="bg-slate-900/70 border border-white/10 rounded-xl p-3 space-y-2">
+                                        <p className="text-[10px] uppercase font-black text-slate-500">Shiny</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setLocalPk({ ...localPk, is_shiny: !localPk.is_shiny })}
+                                            className={`w-full py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${localPk.is_shiny ? 'bg-amber-500/80 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                                        >
+                                            {localPk.is_shiny ? 'Shiny Enabled' : 'Standard Palette'}
+                                        </button>
                                     </div>
 
-                                    <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] text-amber-200">
-                                        Identity edits rewrite PID. Nature and standard ability slot are preserved where possible.
+                                    <div className="bg-slate-900/70 border border-white/10 rounded-xl p-3 space-y-2">
+                                        <p className="text-[10px] uppercase font-black text-slate-500">Gender</p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setLocalPk({ ...localPk, gender: 'male' })}
+                                                disabled={localPk.gender_mode !== 'dynamic'}
+                                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${localPk.gender === 'male' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                            >
+                                                Male
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setLocalPk({ ...localPk, gender: 'female' })}
+                                                disabled={localPk.gender_mode !== 'dynamic'}
+                                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${localPk.gender === 'female' ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                            >
+                                                Female
+                                            </button>
+                                        </div>
+                                        {localPk.gender_mode !== 'dynamic' && (
+                                            <p className="text-[10px] text-slate-500">
+                                                {localPk.gender_mode === 'genderless'
+                                                    ? 'This species is genderless.'
+                                                    : localPk.gender_mode === 'fixed_male'
+                                                        ? 'This species is male-only.'
+                                                        : localPk.gender_mode === 'fixed_female'
+                                                            ? 'This species is female-only.'
+                                                            : 'Gender metadata unavailable for this species.'}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
-                            <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/5 space-y-3">
+                                <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] text-amber-200">
+                                    Identity edits rewrite PID. Nature and standard ability slot are preserved where possible.
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-white/5 space-y-2.5">
                                 <label htmlFor="pokemon-happiness" className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">
                                     Happiness (0–255)
                                 </label>
@@ -1205,138 +1500,9 @@ export const PokemonEditorModal = ({ client, pokemon, legitMode = false, hackedM
                                         ...prev,
                                         happiness: clampNumber(event.target.value, 0, 255),
                                     }))}
-                                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500/50"
+                                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500/50"
                                 />
                                 <p className="text-[10px] text-slate-400">Friendship evolutions use this value.</p>
-                            </div>
-
-                            <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/5 space-y-4">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block text-center">
-                                    Held Item
-                                </label>
-
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-3 text-slate-500" size={16} />
-                                    <input
-                                        type="text"
-                                        placeholder="Search item (e.g. 'Master', 'Leftovers' or ID...)"
-                                        value={itemSearch}
-                                        onChange={(e) => setItemSearch(e.target.value)}
-                                        className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm outline-none focus:border-blue-500/50"
-                                    />
-                                </div>
-
-                                {itemSearch.length > 1 ? (
-                                    <div className="max-h-48 overflow-y-auto bg-slate-900 rounded-xl border border-blue-500/30 divide-y divide-white/5">
-                                        {allItems
-                                            .filter(item =>
-                                                item.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
-                                                item.id.toString() === itemSearch
-                                            )
-                                            .slice(0, 15)
-                                            .map(item => (
-                                                <button
-                                                    key={item.id}
-                                                    onClick={() => {
-                                                        setLocalPk({...localPk, item_id: item.id});
-                                                        setItemSearch('');
-                                                    }}
-                                                    className="w-full text-left px-4 py-3 text-sm hover:bg-blue-600 transition-colors flex justify-between items-center group"
-                                                >
-                                                    <span className="group-hover:text-white">{item.name}</span>
-                                                    <span className="text-blue-400 font-mono text-[10px] bg-blue-500/10 px-2 py-0.5 rounded">ID {item.id}</span>
-                                                </button>
-                                            ))
-                                        }
-                                    </div>
-                                ) : (
-                                    <div className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-emerald-500/20">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] text-slate-500 uppercase font-black">Current Item</span>
-                                            <span className="text-emerald-400 font-bold text-sm">
-                            {currentItemName}
-                        </span>
-                                        </div>
-                                        <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-500">
-                                            {canShowItemIcon ? (
-                                                <img
-                                                    src={client.getItemIconUrl(localPk.item_id)}
-                                                    alt={currentItemName}
-                                                    className="w-7 h-7 object-contain"
-                                                    onError={(e) => {
-                                                        if (e.currentTarget.src !== ITEM_ICON_FALLBACK_URL) {
-                                                            e.currentTarget.src = ITEM_ICON_FALLBACK_URL;
-                                                        }
-                                                    }}
-                                                />
-                                            ) : localPk.item_id > 0 ? (
-                                                <span className="text-[9px] font-mono text-slate-500">#{localPk.item_id}</span>
-                                            ) : (
-                                                <span className="text-sm font-mono text-slate-600 select-none font-bold">—</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/5 space-y-4">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block text-center">
-                                    Caught Ball
-                                </label>
-
-                                <div className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-sky-500/20">
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-slate-500 uppercase font-black">Current Ball</span>
-                                        <span className="text-sky-300 font-bold text-sm">{currentBallName}</span>
-                                    </div>
-                                    <div className="w-10 h-10 bg-sky-500/10 rounded-lg flex items-center justify-center text-sky-500">
-                                        {currentBallItemId ? (
-                                            <img
-                                                src={client.getItemIconUrl(currentBallItemId)}
-                                                alt={currentBallName}
-                                                className="w-7 h-7 object-contain"
-                                                onError={(e) => {
-                                                    if (e.currentTarget.src !== ITEM_ICON_FALLBACK_URL) {
-                                                        e.currentTarget.src = ITEM_ICON_FALLBACK_URL;
-                                                    }
-                                                }}
-                                            />
-                                        ) : (
-                                            <span className="text-[9px] font-mono text-slate-500">#{localPk.ball_id}</span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-                                    {allBalls.map((ball) => {
-                                        const active = Number(localPk.ball_id) === Number(ball.ball_id);
-                                        return (
-                                            <button
-                                                key={ball.ball_id}
-                                                type="button"
-                                                onClick={() => setLocalPk({
-                                                    ...localPk,
-                                                    ball_id: Number(ball.ball_id),
-                                                    ball_item_id: Number(ball.item_id),
-                                                    ball_name: ball.name,
-                                                })}
-                                                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs transition-colors ${active ? 'bg-sky-600/25 border-sky-400/50 text-sky-100' : 'bg-slate-900/60 border-white/10 text-slate-300 hover:bg-white/5'}`}
-                                            >
-                                                <img
-                                                    src={client.getItemIconUrl(ball.item_id)}
-                                                    alt={ball.name}
-                                                    className="w-5 h-5 object-contain"
-                                                    onError={(e) => {
-                                                        if (e.currentTarget.src !== ITEM_ICON_FALLBACK_URL) {
-                                                            e.currentTarget.src = ITEM_ICON_FALLBACK_URL;
-                                                        }
-                                                    }}
-                                                />
-                                                <span className="font-semibold">{ball.name}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
                             </div>
                         </div>
                     )}

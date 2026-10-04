@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Check, Eye, EyeOff, X } from 'lucide-react';
 import { MAX_TRACKED_DEX_ID } from '../core/pokedexCatalog.js';
 
-export default function PokedexFlagsControls({ client, speciesId, speciesLabel }) {
+export default function PokedexFlagsControls({ client, speciesId, speciesLabel, showToast }) {
     const [flags, setFlags] = useState(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(null);
@@ -41,15 +41,21 @@ export default function PokedexFlagsControls({ client, speciesId, speciesLabel }
 
     const updateFlag = async (flag, value) => {
         const action = value ? 'Mark' : 'Clear';
-        if (!window.confirm(`${action} ${flag} for ${label}?\n\nThis writes directly to the loaded save's Pokédex flags.`)) {
-            return;
-        }
         setUpdating(flag);
         setError(null);
         try {
-            setFlags(await client.updatePokedexFlag(sid, { flag, value }));
+            const updated = await client.updatePokedexFlag(sid, { flag, value });
+            setFlags(updated);
+            if (showToast) {
+                const flagLabel = flag === 'seen' ? 'Seen' : 'Caught';
+                showToast(`${action}ed ${flagLabel} for ${label} in Pokédex.`, 'success');
+            }
         } catch (err) {
-            setError(err?.message || 'Failed to update Pokédex flags.');
+            const msg = err?.message || 'Failed to update Pokédex flags.';
+            setError(msg);
+            if (showToast) {
+                showToast(msg, 'error');
+            }
         } finally {
             setUpdating(null);
         }

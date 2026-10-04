@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useMemo, useState, useEffect, useCallback } from 'react';
+import { LogOut, Trash2, AlertTriangle } from 'lucide-react';
 import { createApiClient, getInitialRuntimeMode, persistRuntimeMode } from './services/apiClient.js';
 import { getExpAtLevel, getSpeciesGrowthRate } from './core/growth.js';
 import Sidebar from './components/Sidebar.jsx';
@@ -6,6 +7,7 @@ import TopHeader from './components/TopHeader.jsx';
 import LandingView from './components/LandingView.jsx';
 import ResourcesModal from './components/ResourcesModal.jsx';
 import SaveReportModal from './components/SaveReportModal.jsx';
+import ConfirmModal from './components/ConfirmModal.jsx';
 import ToastContainer from './components/ToastContainer.jsx';
 
 const PartyGrid = lazy(() => import('./components/PartyGrid'));
@@ -61,6 +63,7 @@ export default function App() {
     const [refreshKey, setRefreshKey] = useState(0);
     const [bagHasUnsavedChanges, setBagHasUnsavedChanges] = useState(false);
     const [toasts, setToasts] = useState([]);
+    const [confirmDialog, setConfirmDialog] = useState(null);
 
     const client = useMemo(() => createApiClient(runtimeMode), [runtimeMode]);
 
@@ -76,6 +79,34 @@ export default function App() {
 
     const dismissToast = useCallback((id) => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, []);
+
+    const showConfirm = useCallback(({
+        title = 'Confirm Action',
+        message = 'Are you sure you want to proceed?',
+        subMessage = '',
+        confirmText = 'Confirm',
+        cancelText = 'Cancel',
+        variant = 'danger',
+        icon,
+        onConfirm,
+    }) => {
+        setConfirmDialog({
+            title,
+            message,
+            subMessage,
+            confirmText,
+            cancelText,
+            variant,
+            icon,
+            onConfirm: async () => {
+                setConfirmDialog(null);
+                if (onConfirm) await onConfirm();
+            },
+            onClose: () => {
+                setConfirmDialog(null);
+            },
+        });
     }, []);
 
     useEffect(() => {
@@ -133,9 +164,20 @@ export default function App() {
 
     const handleTabChange = (tabId) => {
         if (activeTab === 'bag' && tabId !== 'bag' && bagHasUnsavedChanges) {
-            const leave = window.confirm('You have unsaved changes in your Bag. Leave anyway?');
-            if (!leave) return;
-            setBagHasUnsavedChanges(false);
+            showConfirm({
+                title: 'Unsaved Bag Changes',
+                message: 'You have unsaved changes in your Bag.',
+                subMessage: 'Leaving this tab will discard unwritten bag changes in memory.',
+                confirmText: 'Leave Tab',
+                cancelText: 'Stay in Bag',
+                variant: 'warning',
+                icon: AlertTriangle,
+                onConfirm: () => {
+                    setBagHasUnsavedChanges(false);
+                    setActiveTab(tabId);
+                },
+            });
+            return;
         }
         setActiveTab(tabId);
     };
@@ -250,19 +292,28 @@ export default function App() {
         }
     };
 
-    const handleReleasePC = async ({ box, slot, pokemon }) => {
-        const label = pokemon?.nickname || pokemon?.species_name || 'this Pokemon';
-        if (!window.confirm(`Release ${label} from ${Number(box) === 26 ? 'Preset' : `Box ${box}`} slot ${slot}?`)) {
-            return;
-        }
-        try {
-            await client.releasePc({ box, slot });
-            await client.saveAll();
-            setRefreshKey((prev) => prev + 1);
-            showToast('Pokemon released successfully.', 'success');
-        } catch {
-            showToast('Failed to release Pokemon.', 'error');
-        }
+    const handleReleasePC = ({ box, slot, pokemon }) => {
+        const label = pokemon?.nickname || pokemon?.species_name || 'this Pokémon';
+        const boxLabel = Number(box) === 26 ? 'Preset' : `Box ${box}`;
+        showConfirm({
+            title: 'Release Pokémon',
+            message: `Are you sure you want to release ${label} from ${boxLabel} (Slot ${slot})?`,
+            subMessage: 'This Pokémon will be permanently released from your PC box in memory.',
+            confirmText: 'Release',
+            cancelText: 'Cancel',
+            variant: 'danger',
+            icon: Trash2,
+            onConfirm: async () => {
+                try {
+                    await client.releasePc({ box, slot });
+                    await client.saveAll();
+                    setRefreshKey((prev) => prev + 1);
+                    showToast(`${label} was released successfully.`, 'success');
+                } catch {
+                    showToast('Failed to release Pokémon.', 'error');
+                }
+            },
+        });
     };
 
     const handleUpdateResources = async (amount, bpAmount) => {
@@ -305,8 +356,27 @@ export default function App() {
         }
     };
 
-    const handleRestartApp = () => {
-        window.location.reload();
+    const handleExitApp = () => {
+        showConfirm({
+            title: 'Exit Save File',
+            message: 'Exit current save file and return to the main menu?',
+            subMessage: 'Any unsaved progress in this session will be discarded.',
+            confirmText: 'Exit to Menu',
+            cancelText: 'Stay in Editor',
+            variant: 'danger',
+            icon: LogOut,
+            onConfirm: () => {
+                setIsLoaded(false);
+                setActiveTab('party');
+                setSelectedPokemon(null);
+                setPcInsertTarget(null);
+                setSaveReport(null);
+                setShowSaveReport(false);
+                setShowResourcesModal(false);
+                setIsMobileSidebarOpen(false);
+                setBagHasUnsavedChanges(false);
+            },
+        });
     };
 
     return (
@@ -320,7 +390,7 @@ export default function App() {
                     bp={bp}
                     saveExt={saveExt}
                     onOpenResources={() => setShowResourcesModal(true)}
-                    onRestart={handleRestartApp}
+                    onExit={handleExitApp}
                     onDownload={handleDownload}
                     isMobileOpen={isMobileSidebarOpen}
                     onCloseMobile={() => setIsMobileSidebarOpen(false)}
@@ -397,6 +467,8 @@ export default function App() {
                                         client={client}
                                         initialUnsaved={bagHasUnsavedChanges}
                                         onDirtyChange={setBagHasUnsavedChanges}
+                                        showToast={showToast}
+                                        showConfirm={showConfirm}
                                     />
                                 )}
                                 {activeTab === 'dex' && (
@@ -441,6 +513,7 @@ export default function App() {
                         hackedMode={hackedMode}
                         onClose={() => setSelectedPokemon(null)}
                         onSave={selectedPokemon?.isPC ? handleSavePC : handleSavePokemon}
+                        showToast={showToast}
                     />
                 </Suspense>
             )}
@@ -456,6 +529,22 @@ export default function App() {
                         onConfirm={handleInsertPcPokemon}
                     />
                 </Suspense>
+            )}
+
+            {/* Confirmation Modal */}
+            {confirmDialog && (
+                <ConfirmModal
+                    isOpen={Boolean(confirmDialog)}
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    subMessage={confirmDialog.subMessage}
+                    confirmText={confirmDialog.confirmText}
+                    cancelText={confirmDialog.cancelText}
+                    variant={confirmDialog.variant}
+                    icon={confirmDialog.icon}
+                    onConfirm={confirmDialog.onConfirm}
+                    onClose={confirmDialog.onClose}
+                />
             )}
 
             {/* Notification Toasts */}

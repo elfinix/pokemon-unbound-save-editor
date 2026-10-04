@@ -18,7 +18,7 @@ export default function SaveReportModal({
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4" role="presentation">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300" role="presentation">
             <section
                 role="dialog"
                 aria-modal="true"

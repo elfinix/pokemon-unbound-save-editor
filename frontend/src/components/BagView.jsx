@@ -3,7 +3,7 @@ import { Search, Package, Edit3, X, ArrowLeft, Star, Save, CircleHelp } from 'lu
 import { ITEM_ICON_FALLBACK_URL } from '../core/iconResolver.js';
 import { pocketTypeForItemId } from '../core/bag.js';
 
-const BagView = ({ client, initialUnsaved = false, onDirtyChange }) => {
+const BagView = ({ client, initialUnsaved = false, onDirtyChange, showToast, showConfirm }) => {
     const isTmHmItemId = (id) =>
         (id >= 289 && id <= 346) ||
         (id >= 375 && id <= 444);
@@ -135,13 +135,18 @@ const BagView = ({ client, initialUnsaved = false, onDirtyChange }) => {
             if (data.results && data.results.length > 0) {
                 setCandidates(data.results);
             } else {
-                alert("No sector found.");
+                if (showToast) {
+                    showToast('No matching bag pocket found.', 'error');
+                }
             }
         } catch (err) {
             console.error(err);
-            alert("Backend error");
+            if (showToast) {
+                showToast('Backend error while scanning bag.', 'error');
+            }
+        } finally {
+            setLoading(false);
         }
-        finally { setLoading(false); }
     };
 
     const loadPocket = async (cand) => {
@@ -217,13 +222,26 @@ const BagView = ({ client, initialUnsaved = false, onDirtyChange }) => {
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [editingItem]);
 
-    const confirmNavigateWithUnsaved = () => {
+    const confirmNavigateWithUnsaved = (callback) => {
         if (!hasUnsavedBagChanges) {
-            return true;
+            callback?.();
+            return;
         }
-        return window.confirm(
-            'You have unsaved bag edits. Continue?\n\nYour changes stay in memory, but the .sav file is not updated until you click SAVE BAG CHANGES.'
-        );
+        if (showConfirm) {
+            showConfirm({
+                title: 'Unsaved Bag Edits',
+                message: 'You have unsaved edits in your Bag.',
+                subMessage: 'Your changes stay in memory, but the .sav file is not updated until you click SAVE BAG CHANGES.',
+                confirmText: 'Leave Pocket',
+                cancelText: 'Keep Editing',
+                variant: 'warning',
+                onConfirm: () => {
+                    callback?.();
+                }
+            });
+        } else {
+            callback?.();
+        }
     };
 
     const handleUpdateSlot = async () => {
@@ -259,10 +277,14 @@ const BagView = ({ client, initialUnsaved = false, onDirtyChange }) => {
             setEditingItem(null);
             setModalSearch("");
             setHasUnsavedBagChanges(true);
-            alert("Edit applied in memory. Click SAVE BAG CHANGES to write to file.");
+            if (showToast) {
+                showToast("Edit applied in memory. Click SAVE BAG CHANGES to write to file.", "info");
+            }
         } catch (err) {
             console.error(err);
-            alert(err?.message || "Error while updating slot.");
+            if (showToast) {
+                showToast(err?.message || "Error while updating slot.", "error");
+            }
         }
     };
 
@@ -270,10 +292,14 @@ const BagView = ({ client, initialUnsaved = false, onDirtyChange }) => {
         try {
             await client.saveAll();
             setHasUnsavedBagChanges(false);
-            alert("Bag saved and checksum recalculated successfully!");
+            if (showToast) {
+                showToast("Bag saved and checksum recalculated successfully!", "success");
+            }
         } catch (err) {
             console.error(err);
-            alert("Final save error");
+            if (showToast) {
+                showToast(err?.message || "Failed to save bag changes to file.", "error");
+            }
         }
     };
 
@@ -504,10 +530,9 @@ const BagView = ({ client, initialUnsaved = false, onDirtyChange }) => {
                             <div className="flex items-center gap-4">
                                 <button
                                     onClick={() => {
-                                        if (!confirmNavigateWithUnsaved()) return;
-                                        setSelectedCand(null);
+                                        confirmNavigateWithUnsaved(() => setSelectedCand(null));
                                     }}
-                                    className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-400 transition-colors"
+                                    className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-400 transition-colors cursor-pointer"
                                 >
                                     <ArrowLeft size={20} />
                                 </button>
@@ -587,7 +612,7 @@ const BagView = ({ client, initialUnsaved = false, onDirtyChange }) => {
 
                     {editingItem && (
                         <div
-                            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
                             onClick={() => {
                                 setEditingItem(null);
                                 setModalSearch('');

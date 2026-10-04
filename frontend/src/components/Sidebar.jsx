@@ -7,7 +7,7 @@ import {
     Briefcase,
     BookOpen,
     Save,
-    RotateCcw,
+    LogOut,
     DollarSign,
     Award,
     Edit3,
@@ -61,11 +61,13 @@ export default function Sidebar({
     bp = 0,
     saveExt = '.sav',
     onOpenResources,
+    onExit,
     onRestart,
     onDownload,
     isMobileOpen = false,
     onCloseMobile,
 }) {
+    const handleExitClick = onExit || onRestart;
     const renderNavContent = () => (
         <div className="flex flex-col h-full justify-between select-none">
             {/* Top Brand Header */}
@@ -198,11 +200,11 @@ export default function Sidebar({
                 <div className="grid grid-cols-2 gap-2">
                     <button
                         type="button"
-                        onClick={onRestart}
+                        onClick={handleExitClick}
                         className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-white/10 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
-                        title="Reload or load new save"
+                        title="Exit save file and return to main menu"
                     >
-                        <RotateCcw size={14} /> Restart
+                        <LogOut size={14} /> Exit
                     </button>
                     <button
                         type="button"

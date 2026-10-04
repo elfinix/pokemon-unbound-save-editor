@@ -24,7 +24,7 @@ export default function ResourcesModal({ initialMoney, initialBp, onClose, onApp
 
     return (
         <div
-            className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300"
             onClick={onClose}
         >
             <div

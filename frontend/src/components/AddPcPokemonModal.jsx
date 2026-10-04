@@ -156,7 +156,7 @@ export default function AddPcPokemonModal({ client, target, onClose, onConfirm, 
 
     return (
         <div
-            className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
+            className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden animate-in fade-in duration-300"
             onClick={isApplying ? undefined : onClose}
         >
             <div
