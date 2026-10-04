@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="topGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="bottomGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#cbd5e1" />
+    </linearGradient>
+    <linearGradient id="centerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#2563eb" stop-opacity="0" />
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <!-- Outer Ring Shadow & Base -->
+  <circle cx="50" cy="50" r="46" fill="#0f172a" stroke="#1e293b" stroke-width="2" />
+
+  <!-- Top Hemisphere (Unbound Royal Blue) -->
+  <path d="M 6.4 50 A 44 44 0 0 1 93.6 50 Z" fill="url(#topGradient)" />
+  
+  <!-- Top Highlight Arc -->
+  <path d="M 16 38 A 38 38 0 0 1 84 38 A 44 44 0 0 0 16 38 Z" fill="#ffffff" fill-opacity="0.25" />
+
+  <!-- Bottom Hemisphere (Clean White / Light Slate) -->
+  <path d="M 6.4 50 A 44 44 0 0 0 93.6 50 Z" fill="url(#bottomGradient)" />
+
+  <!-- Center Black Band -->
+  <rect x="5.5" y="45" width="89" height="10" fill="#090d16" />
+
+  <!-- Center Button Outer Ring -->
+  <circle cx="50" cy="50" r="16" fill="#090d16" />
+  <circle cx="50" cy="50" r="12" fill="#ffffff" />
+  
+  <!-- Center Button Inner Core (Cyan/Blue Unbound Glow) -->
+  <circle cx="50" cy="50" r="8" fill="url(#centerGradient)" stroke="#0284c7" stroke-width="1.5" />
+  <circle cx="47.5" cy="47.5" r="2.5" fill="#ffffff" fill-opacity="0.9" />
+</svg>
