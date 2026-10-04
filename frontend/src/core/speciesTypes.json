@@ -3259,12 +3259,13 @@
   },
   "346": {
     "type1": "Ice",
-    "type2": "Ice",
+    "type2": "Ghost",
     "types": [
-      "Ice"
+      "Ice",
+      "Ghost"
     ],
     "type1_id": 15,
-    "type2_id": 15
+    "type2_id": 7
   },
   "347": {
     "type1": "Ice",

@@ -24,8 +24,13 @@ frontend/dist/
 # Save/ROM/runtime artifacts
 *.sav
 *.gba
+*.ups
+*.ss*
+*.cheats
 *.bak
 *.bak_*
+rom/
+Pokemon Unbound Official Patch*/
 *.analysis_copy
 backend/edited_save.sav
 backend/local_artifacts/
