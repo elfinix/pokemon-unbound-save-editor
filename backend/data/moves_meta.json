@@ -1774,10 +1774,10 @@
   },
   "198": {
     "id": 198,
-    "name": "Bone Rush",
+    "name": "Bone Crush",
     "type": "Ground",
     "power": 25,
-    "accuracy": 90,
+    "accuracy": 100,
     "base_pp": 10,
     "split": "Physical"
   },

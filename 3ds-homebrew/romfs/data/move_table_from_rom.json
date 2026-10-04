@@ -1386,9 +1386,11 @@
     {
       "move_id": 198,
       "offset": 10753054,
-      "name": "Bone Rush",
+      "name": "Bone Crush",
       "raw_hex": "bce3e2d900cce9e7dcffffffff",
-      "base_pp": 10
+      "base_pp": 10,
+      "base_power": 25,
+      "accuracy": 100
     },
     {
       "move_id": 199,

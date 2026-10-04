@@ -195,7 +195,7 @@
 195:Perish Song
 196:Icy Wind
 197:Detect
-198:Bone Rush
+198:Bone Crush
 199:Lock-On
 200:Outrage
 201:Sandstorm
