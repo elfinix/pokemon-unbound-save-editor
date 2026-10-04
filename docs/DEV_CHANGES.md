@@ -16,7 +16,8 @@ This document serves as the central audit trail and development journal for all 
 | **`7f908c8`** | UX / Modals | Replaced browser alerts with `ConfirmModal.jsx`; bag zero-quantity guard | 2026-10-04 |
 | **`93da9b8`** | ROM Patchers | Python ROM patcher scripts (`type`, `ability`, `stat`) with FIFO backup system | 2026-10-04 |
 | **`5cf7bb2`** | Core / Save Engine | Full party save pipeline, `editPartyMonFull`, and regression test suite | 2026-10-04 |
-| **Current** | Modularization & Logs | Split `PokemonEditorModal` into sub-tabs & implemented structured `logger.js` | 2026-10-04 |
+| **Refactor** | Modularization & Logs | Split `PokemonEditorModal` into sub-tabs & implemented structured `logger.js` | 2026-10-04 |
+| **Latest** | UI / Moves Wiki | Added Moves Wiki tab, sidebar group hierarchy, and Gen 8 move metadata fixes | 2026-10-04 |
 
 ---
 
@@ -120,6 +121,24 @@ This document serves as the central audit trail and development journal for all 
 
 ---
 
+### 🔹 Step 9: Sidebar Reorganization, Moves Wiki & Gen 8 Move Metadata Parity
+* **Working Tree:** Latest
+* **Changes:**
+  * Reorganized [`Sidebar.jsx`](file:///d:/Elfinix/Shared/pokemon-unbound-save-editor/frontend/src/components/Sidebar.jsx) into two dedicated categories:
+    * **TEAM BUILDING**: Party, PC Box, Bag, Living Dex.
+    * **TOOLS**: Coverage, Moves Wiki, All Pokémon.
+  * Created comprehensive battle encyclopedia component [`frontend/src/components/MovesWiki.jsx`](file:///d:/Elfinix/Shared/pokemon-unbound-save-editor/frontend/src/components/MovesWiki.jsx):
+    * Fast search by move name, ID, or typing.
+    * Filter chips by 18 Pokémon types and Category (Physical, Special, Status).
+    * Quick toggle for Gen 8+ / CFRU moves.
+    * Dual view modes: **Grid Card view** (with power bars and accuracy pills) and **Compact Table view**.
+    * Responsive pagination with customizable page sizing.
+  * Fixed Gen 8 (CFRU) moves dataset across all locations (`moves_meta.json` in backend, frontend, and homebrew):
+    * Corrected **Triple Arrows** (ID: 758) from placeholder Normal type &rarr; **Fighting** type (`Physical`, `90 Power`, `100 Acc`, `15 PP`).
+    * Corrected all 89 Gen 8/Hisui moves (IDs 678–766: *Triple Axel*, *Wicked Blow*, *Surging Strikes*, *Scale Shot*, *Grassy Glide*, *Glacial Lance*, *Astral Barrage*, *Ceaseless Edge*, etc.) with authentic types, power, accuracy, and split categories.
+
+---
+
 ## 3. Architecture & Directory Structure
 
 ```text
@@ -161,9 +180,10 @@ pokemon-unbound-save-editor/
 │   │       │   ├── ShowdownImportSection.jsx # Smogon set parser UI
 │   │       │   └── constants.js      # Type tokens & boundary limits
 │   │       ├── CoverageView.jsx      # Team type synergy matrix
+│   │       ├── MovesWiki.jsx         # Pokémon Moves encyclopedia & search table
 │   │       ├── ConfirmModal.jsx      # Glassmorphic confirmation dialogs
 │   │       ├── ToastContainer.jsx    # Toast notification queue
-│   │       ├── Sidebar.jsx           # App navigation sidebar
+│   │       ├── Sidebar.jsx           # App navigation sidebar with grouped sections
 │   │       └── TopHeader.jsx         # Status bar, money/BP, and mode switchers
 │   └── scripts/                      # Automated Node.js regression test suite
 ```

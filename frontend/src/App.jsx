@@ -17,6 +17,7 @@ const AllPokemonTable = lazy(() => import('./components/AllPokemonTable.jsx'));
 const BagView = lazy(() => import('./components/BagView.jsx'));
 const LivingDexPanel = lazy(() => import('./components/LivingDexPanel.jsx'));
 const CoverageView = lazy(() => import('./components/CoverageView.jsx'));
+const MovesWiki = lazy(() => import('./components/MovesWiki.jsx'));
 const PokemonEditorModal = lazy(() =>
     import('./components/PokemonEditorModal.jsx').then((mod) => ({ default: mod.PokemonEditorModal }))
 );
@@ -475,6 +476,11 @@ export default function App() {
                                     <CoverageView
                                         key={`coverage-${refreshKey}`}
                                         client={client}
+                                    />
+                                )}
+                                {activeTab === 'moves_wiki' && (
+                                    <MovesWiki
+                                        key={`moves-wiki-${refreshKey}`}
                                     />
                                 )}
                                 {activeTab === 'pc' && (

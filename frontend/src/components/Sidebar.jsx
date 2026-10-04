@@ -12,45 +12,62 @@ import {
     Award,
     Edit3,
     X,
+    Swords,
 } from 'lucide-react';
 import UnboundLogo from './UnboundLogo.jsx';
 
-const NAV_ITEMS = [
+const NAV_SECTIONS = [
     {
-        id: 'party',
-        label: 'Party',
-        sublabel: 'Active Team Roster',
-        icon: LayoutGrid,
+        title: 'TEAM BUILDING',
+        items: [
+            {
+                id: 'party',
+                label: 'Party',
+                sublabel: 'Active Team Roster',
+                icon: LayoutGrid,
+            },
+            {
+                id: 'pc',
+                label: 'PC Box',
+                sublabel: 'Box Storage System',
+                icon: Monitor,
+            },
+            {
+                id: 'bag',
+                label: 'Bag',
+                sublabel: 'Items, Balls & Berries',
+                icon: Briefcase,
+            },
+            {
+                id: 'dex',
+                label: 'Living Dex',
+                sublabel: 'National Dex Progress',
+                icon: BookOpen,
+            },
+        ],
     },
     {
-        id: 'coverage',
-        label: 'Coverage',
-        sublabel: 'Type Matchups Matrix',
-        icon: Target,
-    },
-    {
-        id: 'pc',
-        label: 'PC Box',
-        sublabel: 'Box Storage System',
-        icon: Monitor,
-    },
-    {
-        id: 'all',
-        label: 'All Pokémon',
-        sublabel: 'Master Search Table',
-        icon: ListFilter,
-    },
-    {
-        id: 'bag',
-        label: 'Bag',
-        sublabel: 'Items, Balls & Berries',
-        icon: Briefcase,
-    },
-    {
-        id: 'dex',
-        label: 'Living Dex',
-        sublabel: 'National Dex Progress',
-        icon: BookOpen,
+        title: 'TOOLS',
+        items: [
+            {
+                id: 'coverage',
+                label: 'Coverage',
+                sublabel: 'Type Matchups Matrix',
+                icon: Target,
+            },
+            {
+                id: 'moves_wiki',
+                label: 'Moves Wiki',
+                sublabel: 'Move Database & Stats',
+                icon: Swords,
+            },
+            {
+                id: 'all',
+                label: 'All Pokémon',
+                sublabel: 'Master Search Table',
+                icon: ListFilter,
+            },
+        ],
     },
 ];
 
@@ -106,56 +123,60 @@ export default function Sidebar({
                 </div>
 
                 {/* Navigation Menu */}
-                <nav className="space-y-1.5" aria-label="Sidebar navigation">
-                    <p className="px-3 text-[10px] uppercase font-black tracking-widest text-slate-500 mb-2">
-                        Navigation
-                    </p>
-                    {NAV_ITEMS.map((item) => {
-                        const Icon = item.icon;
-                        const isActive = activeTab === item.id;
-                        return (
-                            <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => {
-                                    onTabChange(item.id);
-                                    if (onCloseMobile) onCloseMobile();
-                                }}
-                                aria-current={isActive ? 'page' : undefined}
-                                className={`w-full group relative flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-left transition-all duration-200 cursor-pointer ${
-                                    isActive
-                                        ? 'bg-blue-600/20 text-white border border-blue-500/40 shadow-lg shadow-blue-600/10 font-bold'
-                                        : 'text-slate-400 hover:text-slate-100 hover:bg-white/5 border border-transparent'
-                                }`}
-                            >
-                                {/* Left Active Pill Bar */}
-                                {isActive && (
-                                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-500 rounded-r-full shadow-md shadow-blue-500/50" />
-                                )}
+                <nav className="space-y-4" aria-label="Sidebar navigation">
+                    {NAV_SECTIONS.map((section) => (
+                        <div key={section.title} className="space-y-1.5">
+                            <p className="px-3 text-[10px] uppercase font-black tracking-widest text-slate-500">
+                                {section.title}
+                            </p>
+                            {section.items.map((item) => {
+                                const Icon = item.icon;
+                                const isActive = activeTab === item.id;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => {
+                                            onTabChange(item.id);
+                                            if (onCloseMobile) onCloseMobile();
+                                        }}
+                                        aria-current={isActive ? 'page' : undefined}
+                                        className={`w-full group relative flex items-center gap-3.5 px-3.5 py-2 rounded-2xl text-left transition-all duration-200 cursor-pointer ${
+                                            isActive
+                                                ? 'bg-blue-600/20 text-white border border-blue-500/40 shadow-lg shadow-blue-600/10 font-bold'
+                                                : 'text-slate-400 hover:text-slate-100 hover:bg-white/5 border border-transparent'
+                                        }`}
+                                    >
+                                        {/* Left Active Pill Bar */}
+                                        {isActive && (
+                                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-500 rounded-r-full shadow-md shadow-blue-500/50" />
+                                        )}
 
-                                <span
-                                    className={`p-2 rounded-xl transition-colors shrink-0 ${
-                                        isActive
-                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                                            : 'bg-slate-800/80 text-slate-400 group-hover:text-slate-200 group-hover:bg-slate-700'
-                                    }`}
-                                >
-                                    <Icon size={18} />
-                                </span>
-
-                                <div className="min-w-0 flex-1">
-                                    <div className="text-xs font-bold leading-none tracking-tight flex items-center justify-between">
-                                        <span className={isActive ? 'text-white' : 'text-slate-300 group-hover:text-white'}>
-                                            {item.label}
+                                        <span
+                                            className={`p-1.5 rounded-xl transition-colors shrink-0 ${
+                                                isActive
+                                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                                                    : 'bg-slate-800/80 text-slate-400 group-hover:text-slate-200 group-hover:bg-slate-700'
+                                            }`}
+                                        >
+                                            <Icon size={16} />
                                         </span>
-                                    </div>
-                                    <p className="text-[10px] text-slate-400/80 mt-1 truncate font-normal">
-                                        {item.sublabel}
-                                    </p>
-                                </div>
-                            </button>
-                        );
-                    })}
+
+                                        <div className="min-w-0 flex-1">
+                                            <div className="text-xs font-bold leading-none tracking-tight flex items-center justify-between">
+                                                <span className={isActive ? 'text-white' : 'text-slate-300 group-hover:text-white'}>
+                                                    {item.label}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-slate-400/80 mt-0.5 truncate font-normal">
+                                                {item.sublabel}
+                                            </p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ))}
                 </nav>
             </div>
 

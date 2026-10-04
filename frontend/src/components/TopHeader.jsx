@@ -9,11 +9,12 @@ import UnboundLogo from './UnboundLogo.jsx';
 
 const TAB_TITLES = {
     party: { title: 'Party Team', subtitle: 'Active battle roster and stats' },
-    coverage: { title: 'Coverage Matrix', subtitle: 'Type matchups, weaknesses & resistances' },
     pc: { title: 'PC Box Storage', subtitle: 'Stored Pokémon management & slot insertion' },
-    all: { title: 'All Pokémon', subtitle: 'Master searchable list of party & PC' },
     bag: { title: 'Bag Inventory', subtitle: 'Pockets, items, balls & berries' },
     dex: { title: 'Living Dex', subtitle: 'National Pokédex collection tracker' },
+    coverage: { title: 'Coverage Matrix', subtitle: 'Type matchups, weaknesses & resistances' },
+    moves_wiki: { title: 'Moves Wiki', subtitle: 'Move database, categories, power & PP' },
+    all: { title: 'All Pokémon', subtitle: 'Master searchable list of party & PC' },
 };
 
 export default function TopHeader({
