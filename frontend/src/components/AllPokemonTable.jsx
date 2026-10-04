@@ -11,8 +11,11 @@ const STATS = [
     ['SpA', 'SpA'], ['SpD', 'SpD'], ['Spe', 'Spe'],
 ];
 
-function statValue(stats, key) {
-    return stats?.[key] ?? (key === 'Spe' ? stats?.Spd : undefined) ?? '—';
+function statValue(stats, key, isIv = false) {
+    const raw = stats?.[key] ?? (key === 'Spe' ? stats?.Spd : undefined);
+    if (raw === undefined || raw === null) return '—';
+    if (isIv && Number(raw) === 0) return '00';
+    return raw;
 }
 
 function displayName(pokemon) {
@@ -24,6 +27,7 @@ function natureName(pokemon) {
 }
 
 function StatLine({ title, values }) {
+    const isIv = title === 'IVs';
     return (
         <div>
             <h4 className="mb-2 text-xs font-semibold text-slate-300">{title}</h4>
@@ -31,7 +35,7 @@ function StatLine({ title, values }) {
                 {STATS.map(([key, label]) => (
                     <div key={key} className="border-l border-slate-600 pl-2">
                         <dt className="text-[11px] text-slate-400">{label}</dt>
-                        <dd className="font-mono text-sm text-slate-100">{statValue(values, key)}</dd>
+                        <dd className="font-mono text-sm text-slate-100">{statValue(values, key, isIv)}</dd>
                     </div>
                 ))}
             </dl>

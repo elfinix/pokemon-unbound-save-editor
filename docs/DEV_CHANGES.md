@@ -157,6 +157,19 @@ This document serves as the central audit trail and development journal for all 
 
 ---
 
+### 🔹 Step 11: IV Display Formatting & EV Input Selector Fix
+* **Working Tree:** Latest
+* **Changes:**
+  * **IV Zero Formatting ("00"):**
+    * Updated [`PokemonCard.jsx`](file:///d:/Elfinix/Shared/pokemon-unbound-save-editor/frontend/src/components/PokemonCard.jsx), [`StatsTab.jsx`](file:///d:/Elfinix/Shared/pokemon-unbound-save-editor/frontend/src/components/PokemonEditor/StatsTab.jsx), and [`AllPokemonTable.jsx`](file:///d:/Elfinix/Shared/pokemon-unbound-save-editor/frontend/src/components/AllPokemonTable.jsx) to display `0` IVs as `"00"`, creating uniform 2-digit alignment across all stat bars and matrices.
+  * **EV Input Leading Zero Normalization:**
+    * Fixed React controlled number input desynchronization in [`StatsTab.jsx`](file:///d:/Elfinix/Shared/pokemon-unbound-save-editor/frontend/src/components/PokemonEditor/StatsTab.jsx).
+    * Implemented auto-select on focus (`onFocus={(e) => e.target.select()}`) so typing immediately replaces initial `0` without creating values like `023`.
+    * Added numeric input normalization stripping leading zeros (`raw.replace(/^0+(?=\d)/, '')`) on change and blur.
+    * Added keyboard arrow navigation (`ArrowUp` / `ArrowDown`) supporting standard +4 EV steps and Shift-modified +10 jumps.
+
+---
+
 ## 3. Architecture & Directory Structure
 
 ```text

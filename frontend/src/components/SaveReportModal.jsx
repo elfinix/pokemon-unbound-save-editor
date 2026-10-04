@@ -29,7 +29,7 @@ export default function SaveReportModal({
                     <div>
                         <h2 id="save-report-title" className="text-xl font-black text-white">Review Save Before Download</h2>
                         <p className="mt-1 text-xs text-slate-400">
-                            Inspects your proposed changes. Saving will download your modified <span className="text-blue-300 font-bold">.{saveExt}</span> and an untouched safety backup (<span className="text-amber-300 font-bold">.{saveExt}.bak</span>).
+                            Inspects your proposed changes. Saving will download your modified <span className="text-blue-300 font-bold">.{saveExt}</span> and an untouched (<span className="text-amber-300 font-bold">.{saveExt}.bak</span>).
                         </p>
                     </div>
                     <button

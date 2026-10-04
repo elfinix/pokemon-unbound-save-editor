@@ -159,6 +159,7 @@ export const PkHexMoveRow = ({
                     max={maxUsablePp}
                     value={movePp}
                     disabled={moveId <= 0 || isPcMon}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => onPpChange(slotIndex, e.target.value)}
                     className="w-12 bg-slate-900 border border-white/10 rounded-lg text-center font-mono font-bold text-xs py-1.5 outline-none focus:border-blue-400 disabled:opacity-40"
                     title={`Current PP (max ${maxUsablePp})`}

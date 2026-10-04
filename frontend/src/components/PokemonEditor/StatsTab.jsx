@@ -124,26 +124,77 @@ export const StatsTab = ({
                                             </td>
                                             <td className="py-2 px-3 text-center align-middle">
                                                 <input
-                                                    type="number"
-                                                    min="0"
-                                                    max="31"
-                                                    value={row.iv}
-                                                    onChange={(e) => updateStat('ivs', row.key, e.target.value)}
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    value={Number(row.iv) === 0 ? '00' : String(row.iv)}
+                                                    onFocus={(e) => e.target.select()}
+                                                    onChange={(e) => {
+                                                        const raw = e.target.value.replace(/[^0-9]/g, '');
+                                                        if (raw === '') {
+                                                            updateStat('ivs', row.key, 0);
+                                                            return;
+                                                        }
+                                                        const stripped = raw.replace(/^0+(?=\d)/, '');
+                                                        const val = parseInt(stripped, 10);
+                                                        updateStat('ivs', row.key, isNaN(val) ? 0 : Math.min(31, Math.max(0, val)));
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'ArrowUp') {
+                                                            e.preventDefault();
+                                                            updateStat('ivs', row.key, Math.min(31, (Number(row.iv) || 0) + 1));
+                                                        } else if (e.key === 'ArrowDown') {
+                                                            e.preventDefault();
+                                                            updateStat('ivs', row.key, Math.max(0, (Number(row.iv) || 0) - 1));
+                                                        }
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        const val = parseInt(e.target.value, 10);
+                                                        updateStat('ivs', row.key, isNaN(val) ? 0 : Math.min(31, Math.max(0, val)));
+                                                    }}
                                                     className={`w-14 bg-slate-950/80 border rounded-lg text-center font-mono font-bold text-xs py-1 transition-colors outline-none focus:ring-1 focus:ring-blue-400 ${
-                                                        row.iv === 31 ? 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10' : 'text-slate-200 border-white/10'
+                                                        row.iv === 31 ? 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10' : Number(row.iv) === 0 ? 'text-slate-500 border-white/10' : 'text-slate-200 border-white/10'
                                                     }`}
+                                                    title="IV (0-31)"
                                                 />
                                             </td>
                                             <td className="py-2 px-3 text-center align-middle">
                                                 <input
-                                                    type="number"
-                                                    min="0"
-                                                    max="252"
-                                                    value={row.ev}
-                                                    onChange={(e) => updateStat('evs', row.key, e.target.value)}
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    value={String(row.ev)}
+                                                    onFocus={(e) => e.target.select()}
+                                                    onChange={(e) => {
+                                                        const raw = e.target.value.replace(/[^0-9]/g, '');
+                                                        if (raw === '') {
+                                                            updateStat('evs', row.key, 0);
+                                                            return;
+                                                        }
+                                                        // Strip leading zeros so "023" becomes 23, "00" becomes 0
+                                                        const stripped = raw.replace(/^0+(?=\d)/, '');
+                                                        const val = parseInt(stripped, 10);
+                                                        updateStat('evs', row.key, isNaN(val) ? 0 : val);
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'ArrowUp') {
+                                                            e.preventDefault();
+                                                            const step = e.shiftKey ? 10 : 4;
+                                                            updateStat('evs', row.key, Math.min(252, (Number(row.ev) || 0) + step));
+                                                        } else if (e.key === 'ArrowDown') {
+                                                            e.preventDefault();
+                                                            const step = e.shiftKey ? 10 : 4;
+                                                            updateStat('evs', row.key, Math.max(0, (Number(row.ev) || 0) - step));
+                                                        }
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        const val = parseInt(e.target.value, 10);
+                                                        updateStat('evs', row.key, isNaN(val) ? 0 : val);
+                                                    }}
                                                     className={`w-16 bg-slate-950/80 border rounded-lg text-center font-mono font-bold text-xs py-1 transition-colors outline-none focus:ring-1 focus:ring-blue-400 ${
                                                         row.ev === 252 ? 'text-blue-400 border-blue-500/40 bg-blue-500/10' : row.ev > 0 ? 'text-slate-200 border-white/20' : 'text-slate-500 border-white/10'
                                                     }`}
+                                                    title="EV (0-252)"
                                                 />
                                             </td>
                                             <td className="py-2 px-3 text-right align-middle">

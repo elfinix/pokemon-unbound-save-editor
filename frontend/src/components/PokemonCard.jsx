@@ -258,8 +258,8 @@ const PokemonCard = ({ pokemon, onEdit, getPokemonIconUrl, getItemIconUrl }) => 
                                             {s.statVal ?? '-'}
                                         </span>
                                         <span className="text-[10px] text-slate-500 mx-1 font-sans">/</span>
-                                        <span className={`text-[10px] tabular-nums font-semibold ${s.ivVal === 31 ? 'text-emerald-400 font-bold' : 'text-slate-400'}`}>
-                                            {s.ivVal}
+                                        <span className={`text-[10px] tabular-nums font-semibold ${s.ivVal === 31 ? 'text-emerald-400 font-bold' : Number(s.ivVal) === 0 ? 'text-slate-500' : 'text-slate-400'}`}>
+                                            {Number(s.ivVal) === 0 ? '00' : s.ivVal}
                                         </span>
                                     </div>
                                 </div>
