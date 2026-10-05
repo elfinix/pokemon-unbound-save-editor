@@ -198,32 +198,34 @@ Converts all Normal-type attacks into another element and boosts their power by 
 
 ## 7. Unbound's 22 Built-In Custom Abilities (Slots #271–292)
 
-Skeli compiled 22 exclusive custom abilities into Pokémon Unbound. These have active battle engine code and can be assigned to any Pokémon:
+In Pokémon Unbound, Skeli built 22 exclusive custom abilities into the CFRU engine. Rather than inventing unstable new scripting subsystems, these abilities are **natively compiled species-specific clones of powerful engine mechanics** (with custom names and summary descriptions).
 
-| Ability Name | ID | Category / Theme | Compiled In-Battle Behavior |
+They can be assigned to **any Pokémon** using the Save Editor or ROM base stats patcher:
+
+| Ability Name | ID | Underlying Engine Parent | Exact Functional In-Battle Behavior |
 | :--- | :---: | :--- | :--- |
-| **Nine Lives** | `#271` | Survival | Multi-hit / feline survival passive. |
-| **Focus Belt** | `#272` | Focus / Endure | Enhanced Endure / Focus Sash utility. |
-| **Evaporate** | `#273` | Water / Steam | Evaporates incoming Water damage into steam. |
-| **Fiery Neigh** | `#274` | Fire Moxie | Boosts Sp. Atk / Atk on KO with fire energy. |
-| **Shocking Neigh** | `#275` | Electric Moxie | Boosts Sp. Atk / Atk on KO with electric energy. |
-| **Pride** | `#276` | Stat Boost | Offense boosts when facing superior foes. |
-| **Multieye** | `#277` | Accuracy / Evasion | Compound vision; immune to accuracy drops. |
-| **Subterfuge** | `#278` | Dark / Deception | Bypass / infiltration attack utility. |
-| **Honey Armor** | `#279` | Bug / Defense | Sticky defensive barrier reducing damage. |
-| **Tangling Wool** | `#280` | Contact Debuff | Lowers attacker's Speed when hit by contact moves. |
-| **Brain Bond** | `#281` | Psychic Multi-Hit | Psychic sync / double-strike synergy. |
-| **Grass Dash** | `#282` | Speed / Grass | Priority / Speed surge on Grassy Terrain. |
-| **Slippery Tail** | `#283` | Evasion | High evasion against tail & physical moves. |
-| **Drill Beak** | `#284` | Flying Penetration | Pierces defensive barriers and screens. |
-| **Cotton Cloud** | `#285` | Float / Defense | Airborne cushion halving physical impact. |
-| **Bellow** | `#286` | Sound / Intimidate | Sound-based offensive debuff on switch-in. |
-| **Sound Waves** | `#287` | Sound Piercing | Sound moves bypass substitute and deal extra damage. |
-| **Icy Skin** | `#288` | Ice / Hail | Ice body defense & passive healing in Snow/Hail. |
-| **Dusty Scales** | `#289` | Dragon / Ground | Scale defense against powder, sand, and physical hits. |
-| **Crabby Tactics** | `#290` | Water / Fighting | Boosts physical attack power on crab/pincer moves. |
-| **Face Shield** | `#291` | Head / Shield | Frontal barrier reducing head-on attack damage. |
-| **Royal Roar** | `#292` | Crown / Intimidate | Majestic battle cry lowering foe's offensive stats on entry. |
+| **Nine Lives** | `#271` | **Sturdy** (`#5`) | **Survives any lethal hit with 1 HP** when at full health; grants full immunity to 1-hit KO moves. |
+| **Focus Belt** | `#272` | **Sturdy** (`#5`) | **Built-in Focus Sash**. Survives any lethal hit with 1 HP when at full health; immune to OHKO moves. |
+| **Evaporate** | `#273` | **Storm Drain** (`#114`) | **Draws in all Water-type moves**, nullifies their damage completely, and **boosts Sp. Atk by +1 stage**. |
+| **Fiery Neigh** | `#274` | **Moxie** (`#153`) | **Boosts Attack by +1 stage** every time the Pokémon knocks out an opponent with an attack. |
+| **Shocking Neigh** | `#275` | **Moxie** (`#153`) | **Boosts Attack by +1 stage** every time the Pokémon knocks out an opponent with an attack. |
+| **Pride** | `#276` | **Moxie** (`#153`) | **Boosts Attack by +1 stage** every time the Pokémon knocks out an opponent with an attack. |
+| **Multieye** | `#277` | **Multiscale** (`#81`) | **Halves all incoming direct damage (takes 0.5x)** when the Pokémon is at 100% full HP. |
+| **Subterfuge** | `#278` | **Protean / Libero** (`#168`) | **Changes the Pokémon's primary type** to the type of the move it is about to use right before attacking. |
+| **Honey Armor** | `#279` | **Dauntless Shield** (`#239`) | **Boosts Defense by +1 stage** immediately upon switching into battle. |
+| **Tangling Wool** | `#280` | **Gooey / Tangling Hair** (`#121`) | **Lowers the attacker's Speed by 1 stage** whenever this Pokémon is hit by a physical contact move. |
+| **Brain Bond** | `#281` | **Parental Bond** (`#125`) | **All single-target attacks hit twice**; the second strike deals **25% damage** and can trigger secondary effects. |
+| **Grass Dash** | `#282` | **Gale Wings** (`#117`) | Grants **+1 Priority to all Grass-type moves** when the Pokémon is at full HP. |
+| **Slippery Tail** | `#283` | **Gale Wings (Tail)** (`#117`) | Grants **+1 Priority to all tail-based moves** (e.g. Iron Tail, Aqua Tail, Poison Tail, Dragon Tail) at full HP. |
+| **Drill Beak** | `#284` | **Merciless** (`#196`) | **Guarantees 100% Critical Hits** against targets afflicted by status conditions (or drill attacks). |
+| **Cotton Cloud** | `#285` | **Cotton Down** (`#246`) | **Lowers the Speed of all other active Pokémon by 1 stage** whenever this Pokémon is damaged by an attack. |
+| **Bellow** | `#286` | **Punk Rock** (`#251`) | **Boosts the power of sound-based moves by 1.3x** (30%) and **halves all incoming sound move damage** (takes 0.5x). |
+| **Sound Waves** | `#287` | **Punk Rock** (`#251`) | **Boosts the power of sound-based moves by 1.3x** (30%) and **halves all incoming sound move damage** (takes 0.5x). |
+| **Icy Skin** | `#288` | **Ice Scales** (`#248`) | **Halves all incoming Special attack damage (takes 0.5x)** regardless of HP percentage. |
+| **Dusty Scales** | `#289` | **Ice Scales** (`#248`) | **Halves all incoming Special attack damage (takes 0.5x)** regardless of HP percentage. |
+| **Crabby Tactics** | `#290` | **Gorilla Tactics** (`#255`) | **Boosts physical Attack by 1.5x (50%)**, but locks the Pokémon into the first move used until switched out (built-in Choice Band). |
+| **Face Shield** | `#291` | **Dauntless Shield** (`#239`) | **Boosts Defense by +1 stage** immediately upon switching into battle. |
+| **Royal Roar** | `#292` | **Grim Neigh** (`#240`) | **Boosts Sp. Atk by +1 stage** every time the Pokémon knocks out an opponent with an attack. |
 
 ---
 

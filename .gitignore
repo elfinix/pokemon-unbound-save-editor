@@ -102,3 +102,7 @@ backend/SAVE_EDITING_GUIDE.md
 
 # Local specs
 spec/
+dumps/
+
+# References
+references/
